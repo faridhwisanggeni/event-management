@@ -4,6 +4,7 @@ import { AttendeeRole } from '@prisma/client';
 
 import { EventsService } from '../events/events.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AttendeeEmbeddingService } from './attendee-embedding.service';
 import { AttendeesService } from './attendees.service';
 
 const buildPrismaMock = () => ({
@@ -19,16 +20,19 @@ describe('AttendeesService', () => {
   let service: AttendeesService;
   let prisma: ReturnType<typeof buildPrismaMock>;
   let events: { assertExists: jest.Mock };
+  let embeddings: { upsertForAttendee: jest.Mock };
 
   beforeEach(async () => {
     prisma = buildPrismaMock();
     events = { assertExists: jest.fn().mockResolvedValue(undefined) };
+    embeddings = { upsertForAttendee: jest.fn().mockResolvedValue(undefined) };
 
     const module = await Test.createTestingModule({
       providers: [
         AttendeesService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventsService, useValue: events },
+        { provide: AttendeeEmbeddingService, useValue: embeddings },
       ],
     }).compile();
 

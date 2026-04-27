@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: eventmgmt-postgres
     restart: unless-stopped
     environment:
@@ -34,6 +34,13 @@ services:
       DATABASE_URL: postgresql://eventmgmt:eventmgmt@postgres:5432/eventmgmt?schema=public
       # Comma-separated allow-list of browser origins permitted to call the API.
       CORS_ORIGINS: http://localhost:3000
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMS: ${OPENAI_EMBEDDING_DIMS:-1536}
+      CONCIERGE_MAX_TOOL_ITERATIONS: 6
+      CONCIERGE_LLM_TIMEOUT_MS: 30000
+      SCORE_MATCH_URL: ${SCORE_MATCH_URL:-}
     ports:
       - "3001:3001"
 

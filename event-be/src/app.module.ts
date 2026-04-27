@@ -8,6 +8,7 @@ import { randomUUID } from 'crypto';
 import { PrismaModule } from './prisma/prisma.module';
 import { EventsModule } from './events/events.module';
 import { AttendeesModule } from './attendees/attendees.module';
+import { ConciergeModule } from './concierge/concierge.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AttendeesModule } from './attendees/attendees.module';
     PrismaModule,
     EventsModule,
     AttendeesModule,
+    ConciergeModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
