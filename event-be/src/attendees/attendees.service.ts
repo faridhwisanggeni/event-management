@@ -26,7 +26,7 @@ export class AttendeesService {
         headline: dto.headline,
         bio: dto.bio,
         company: dto.company,
-        role: dto.role,
+        roleId: dto.roleId,
         skills: dto.skills ?? [],
         lookingFor: dto.lookingFor,
         openToChat: dto.openToChat ?? true,
@@ -44,8 +44,8 @@ export class AttendeesService {
 
     const where: Prisma.AttendeeWhereInput = { eventId };
 
-    if (query.role) {
-      where.role = query.role;
+    if (query.roleId) {
+      where.roleId = query.roleId;
     }
 
     if (query.skills && query.skills.length > 0) {
@@ -57,6 +57,7 @@ export class AttendeesService {
     const [data, total] = await this.prisma.$transaction([
       this.prisma.attendee.findMany({
         where,
+        include: { role: true },
         orderBy: { createdAt: 'desc' },
         skip,
         take: query.pageSize,

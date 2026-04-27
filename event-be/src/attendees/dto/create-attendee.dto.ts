@@ -4,13 +4,12 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
-import { AttendeeRole } from '@prisma/client';
 
 export class CreateAttendeeDto {
   @IsString()
@@ -34,10 +33,8 @@ export class CreateAttendeeDto {
   company?: string;
 
   @IsOptional()
-  @IsEnum(AttendeeRole, {
-    message: `role must be one of: ${Object.values(AttendeeRole).join(', ')}`,
-  })
-  role?: AttendeeRole;
+  @IsUUID()
+  roleId?: string;
 
   @IsOptional()
   @IsArray()

@@ -1,6 +1,5 @@
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { AttendeeRole } from '@prisma/client';
 
 import { EventsService } from '../events/events.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -63,23 +62,25 @@ describe('AttendeesService', () => {
     expect(prisma.attendee.create).not.toHaveBeenCalled();
   });
 
-  it('builds list filters for role + skills overlap and paginates', async () => {
+  it('builds list filters for roleId + skills overlap and paginates', async () => {
     prisma.attendee.findMany.mockResolvedValue([{ id: 'a1' }]);
     prisma.attendee.count.mockResolvedValue(42);
 
+    const roleId = '11111111-1111-1111-1111-111111111111';
     const result = await service.list('evt-1', {
       page: 2,
       pageSize: 10,
-      role: AttendeeRole.BACKEND_DEVELOPER,
+      roleId,
       skills: ['ai', 'founder'],
     });
 
     expect(prisma.attendee.findMany).toHaveBeenCalledWith({
       where: {
         eventId: 'evt-1',
-        role: AttendeeRole.BACKEND_DEVELOPER,
+        roleId,
         skills: { hasSome: ['ai', 'founder'] },
       },
+      include: { role: true },
       orderBy: { createdAt: 'desc' },
       skip: 10,
       take: 10,

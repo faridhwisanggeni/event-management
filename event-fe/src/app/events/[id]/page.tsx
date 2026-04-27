@@ -8,8 +8,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
 import { eventsApi, attendeesApi } from '@/lib/api';
-import { ATTENDEE_ROLES, roleLabel } from '@/lib/roles';
-import type { AttendeeRole } from '@/lib/types';
+import { useRoles, roleLabel } from '@/lib/roles';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,7 +36,8 @@ const PAGE_SIZE = 10;
 export default function EventDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [page, setPage] = useState(1);
-  const [role, setRole] = useState<AttendeeRole | undefined>(undefined);
+  const [roleId, setRoleId] = useState<string | undefined>(undefined);
+  const rolesQuery = useRoles();
   const [skillsInput, setSkillsInput] = useState('');
   const [appliedSkills, setAppliedSkills] = useState<string[]>([]);
 
@@ -48,9 +48,9 @@ export default function EventDetailPage() {
   });
 
   const attendeesQuery = useQuery({
-    queryKey: ['attendees', id, { page, role, skills: appliedSkills }],
+    queryKey: ['attendees', id, { page, roleId, skills: appliedSkills }],
     queryFn: () =>
-      attendeesApi.list(id, { page, pageSize: PAGE_SIZE, role, skills: appliedSkills }),
+      attendeesApi.list(id, { page, pageSize: PAGE_SIZE, roleId, skills: appliedSkills }),
     enabled: !!id,
     placeholderData: (prev) => prev,
   });
@@ -65,7 +65,7 @@ export default function EventDetailPage() {
   };
 
   const onClearFilters = () => {
-    setRole(undefined);
+    setRoleId(undefined);
     setSkillsInput('');
     setAppliedSkills([]);
     setPage(1);
@@ -118,19 +118,21 @@ export default function EventDetailPage() {
           <div className="space-y-1.5">
             <Label className="text-xs">Filter by role</Label>
             <Select
-              value={role ?? 'ALL'}
+              value={roleId ?? 'ALL'}
               onValueChange={(v) => {
-                setRole(v === 'ALL' ? undefined : (v as AttendeeRole));
+                setRoleId(v === 'ALL' ? undefined : v);
                 setPage(1);
               }}
             >
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue
+                  placeholder={rolesQuery.isLoading ? 'Loading roles…' : 'All roles'}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All roles</SelectItem>
-                {ATTENDEE_ROLES.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>
+                {(rolesQuery.data ?? []).map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
                     {r.label}
                   </SelectItem>
                 ))}
@@ -157,7 +159,7 @@ export default function EventDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {(role || appliedSkills.length > 0) && (
+          {(roleId || appliedSkills.length > 0) && (
             <Button variant="ghost" onClick={onClearFilters} size="sm">
               <X />
               Clear

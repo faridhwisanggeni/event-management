@@ -1,15 +1,12 @@
 import { Transform, Type } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString } from 'class-validator';
-import { AttendeeRole } from '@prisma/client';
+import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID } from 'class-validator';
 
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 
 export class ListAttendeesQueryDto extends PaginationQueryDto {
   @IsOptional()
-  @IsEnum(AttendeeRole, {
-    message: `role must be one of: ${Object.values(AttendeeRole).join(', ')}`,
-  })
-  role?: AttendeeRole;
+  @IsUUID()
+  roleId?: string;
 
   @IsOptional()
   @Transform(({ value }: { value: unknown }) => {

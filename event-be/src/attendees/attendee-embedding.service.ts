@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Attendee } from '@prisma/client';
+import { Attendee, Role } from '@prisma/client';
 
 import { LlmService } from '../llm/llm.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,12 +22,16 @@ export class AttendeeEmbeddingService {
     private readonly llm: LlmService,
   ) {}
 
-  buildProfileText(a: Pick<Attendee, 'name' | 'headline' | 'bio' | 'company' | 'role' | 'skills' | 'lookingFor'>): string {
+  buildProfileText(
+    a: Pick<Attendee, 'name' | 'headline' | 'bio' | 'company' | 'skills' | 'lookingFor'> & {
+      role?: Pick<Role, 'code' | 'label'> | null;
+    },
+  ): string {
     return [
       `Name: ${a.name}`,
       a.headline ? `Headline: ${a.headline}` : null,
       a.company ? `Company: ${a.company}` : null,
-      a.role ? `Role: ${a.role}` : null,
+      a.role ? `Role: ${a.role.label}` : null,
       a.skills?.length ? `Skills: ${a.skills.join(', ')}` : null,
       a.bio ? `Bio: ${a.bio}` : null,
       a.lookingFor ? `Looking for: ${a.lookingFor}` : null,
@@ -43,7 +47,10 @@ export class AttendeeEmbeddingService {
     }
 
     try {
-      const attendee = await this.prisma.attendee.findUniqueOrThrow({ where: { id: attendeeId } });
+      const attendee = await this.prisma.attendee.findUniqueOrThrow({
+        where: { id: attendeeId },
+        include: { role: true },
+      });
       const text = this.buildProfileText(attendee);
       const vector = await this.llm.embed(text);
       const literal = `[${vector.join(',')}]`;

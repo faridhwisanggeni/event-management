@@ -30,17 +30,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { attendeesApi } from '@/lib/api';
-import { ATTENDEE_ROLES } from '@/lib/roles';
-import type { AttendeeRole } from '@/lib/types';
-
-const ROLE_VALUES = ATTENDEE_ROLES.map((r) => r.value) as [AttendeeRole, ...AttendeeRole[]];
+import { useRoles } from '@/lib/roles';
 
 const schema = z.object({
   name: z.string().min(1, 'Required').max(120),
   headline: z.string().max(200).optional(),
   bio: z.string().max(4000).optional(),
   company: z.string().max(120).optional(),
-  role: z.enum(ROLE_VALUES).optional(),
+  roleId: z.string().uuid().optional().or(z.literal('')),
   skills: z.string().optional(),
   lookingFor: z.string().max(2000).optional(),
   openToChat: z.boolean().default(true),
@@ -55,6 +52,7 @@ interface Props {
 export function RegisterAttendeeDialog({ eventId }: Props) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const rolesQuery = useRoles();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,7 +66,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
         headline: values.headline || undefined,
         bio: values.bio || undefined,
         company: values.company || undefined,
-        role: values.role,
+        roleId: values.roleId || undefined,
         skills: values.skills
           ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
           : undefined,
@@ -131,15 +129,17 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
               <Label>Role</Label>
               <Controller
                 control={form.control}
-                name="role"
+                name="roleId"
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} value={field.value ?? ''}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
+                      <SelectValue
+                        placeholder={rolesQuery.isLoading ? 'Loading roles…' : 'Select a role'}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {ATTENDEE_ROLES.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
+                      {(rolesQuery.data ?? []).map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
                           {r.label}
                         </SelectItem>
                       ))}

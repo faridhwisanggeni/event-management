@@ -8,19 +8,15 @@ export interface Event {
   updatedAt: string;
 }
 
-export type AttendeeRole =
-  | 'BACKEND_DEVELOPER'
-  | 'FRONTEND_DEVELOPER'
-  | 'FULLSTACK_DEVELOPER'
-  | 'PROJECT_MANAGER'
-  | 'PRODUCT_OWNER'
-  | 'CHIEF_TECHNOLOGY_OFFICER'
-  | 'HEAD_OF_ENGINEERING'
-  | 'ENGINEERING_MANAGER'
-  | 'DATABASE_ADMINISTRATOR'
-  | 'DEVOPS'
-  | 'DEVSECOPS'
-  | 'NETWORK_ENGINEERING';
+export interface Role {
+  id: string;
+  code: string;
+  label: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Attendee {
   id: string;
@@ -29,7 +25,9 @@ export interface Attendee {
   headline: string | null;
   bio: string | null;
   company: string | null;
-  role: AttendeeRole | null;
+  roleId: string | null;
+  /** Included when the endpoint joins the Role relation. */
+  role?: Role | null;
   skills: string[];
   lookingFor: string | null;
   openToChat: boolean;

@@ -1,26 +1,24 @@
-import type { AttendeeRole } from './types';
+import { useQuery } from '@tanstack/react-query';
 
-export const ATTENDEE_ROLES: { value: AttendeeRole; label: string }[] = [
-  { value: 'BACKEND_DEVELOPER', label: 'Backend Developer' },
-  { value: 'FRONTEND_DEVELOPER', label: 'Frontend Developer' },
-  { value: 'FULLSTACK_DEVELOPER', label: 'Fullstack Developer' },
-  { value: 'PROJECT_MANAGER', label: 'Project Manager' },
-  { value: 'PRODUCT_OWNER', label: 'Product Owner' },
-  { value: 'CHIEF_TECHNOLOGY_OFFICER', label: 'Chief Technology Officer' },
-  { value: 'HEAD_OF_ENGINEERING', label: 'Head of Engineering' },
-  { value: 'ENGINEERING_MANAGER', label: 'Engineering Manager' },
-  { value: 'DATABASE_ADMINISTRATOR', label: 'Database Administrator' },
-  { value: 'DEVOPS', label: 'DevOps' },
-  { value: 'DEVSECOPS', label: 'DevSecOps' },
-  { value: 'NETWORK_ENGINEERING', label: 'Network Engineering' },
-];
+import { rolesApi } from './api';
+import type { Role } from './types';
 
-const labelMap = Object.fromEntries(ATTENDEE_ROLES.map((r) => [r.value, r.label])) as Record<
-  AttendeeRole,
-  string
->;
+/**
+ * Shared React Query hook for the attendee-role dropdown.
+ *
+ * Kept lightweight: the backend returns only active roles already sorted,
+ * so components just consume this list directly. Stale time is generous
+ * because roles change rarely and a refetch isn't worth the jitter.
+ */
+export function useRoles() {
+  return useQuery<Role[]>({
+    queryKey: ['roles'],
+    queryFn: rolesApi.list,
+    staleTime: 5 * 60_000,
+  });
+}
 
-export function roleLabel(role: AttendeeRole | null | undefined): string {
+export function roleLabel(role: Pick<Role, 'label' | 'code'> | null | undefined): string {
   if (!role) return '—';
-  return labelMap[role] ?? role;
+  return role.label ?? role.code;
 }

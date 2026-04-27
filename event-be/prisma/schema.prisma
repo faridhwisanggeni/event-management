@@ -32,9 +32,9 @@ model Attendee {
   name       String   @db.VarChar(120)
   headline   String?  @db.VarChar(200)
   bio        String?  @db.Text
-  company    String?       @db.VarChar(120)
-  role       AttendeeRole?
-  skills     String[]      @default([])
+  company    String?  @db.VarChar(120)
+  roleId     String?  @map("role_id") @db.Uuid
+  skills     String[] @default([])
   lookingFor String?  @map("looking_for") @db.Text
   openToChat Boolean  @default(true) @map("open_to_chat")
   embedding  Unsupported("vector(1536)")?
@@ -42,12 +42,28 @@ model Attendee {
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   event             Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role              Role?              @relation(fields: [roleId], references: [id], onDelete: SetNull)
   conciergeSessions ConciergeSession[]
 
   @@index([eventId])
-  @@index([eventId, role])
+  @@index([eventId, roleId])
   @@index([skills], type: Gin)
   @@map("attendees")
+}
+
+model Role {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique @db.VarChar(40)
+  label     String   @db.VarChar(100)
+  sortOrder Int      @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  attendees Attendee[]
+
+  @@index([sortOrder])
+  @@map("attendee_roles")
 }
 
 model ConciergeSession {
@@ -107,19 +123,3 @@ enum ConciergeRole {
   @@map("concierge_role")
 }
 
-enum AttendeeRole {
-  BACKEND_DEVELOPER
-  FRONTEND_DEVELOPER
-  FULLSTACK_DEVELOPER
-  PROJECT_MANAGER
-  PRODUCT_OWNER
-  CHIEF_TECHNOLOGY_OFFICER
-  HEAD_OF_ENGINEERING
-  ENGINEERING_MANAGER
-  DATABASE_ADMINISTRATOR
-  DEVOPS
-  DEVSECOPS
-  NETWORK_ENGINEERING
-
-  @@map("attendee_role")
-}

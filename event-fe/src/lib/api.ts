@@ -1,4 +1,4 @@
-import type { ApiError, Attendee, AttendeeRole, Event, Paginated } from './types';
+import type { ApiError, Attendee, Event, Paginated, Role } from './types';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1';
@@ -59,7 +59,7 @@ export interface CreateAttendeeInput {
   headline?: string;
   bio?: string;
   company?: string;
-  role?: AttendeeRole;
+  roleId?: string;
   skills?: string[];
   lookingFor?: string;
   openToChat?: boolean;
@@ -68,7 +68,7 @@ export interface CreateAttendeeInput {
 export interface ListAttendeesParams {
   page?: number;
   pageSize?: number;
-  role?: AttendeeRole;
+  roleId?: string;
   skills?: string[];
 }
 
@@ -77,7 +77,7 @@ export const attendeesApi = {
     const qs = new URLSearchParams();
     if (params.page) qs.set('page', String(params.page));
     if (params.pageSize) qs.set('pageSize', String(params.pageSize));
-    if (params.role) qs.set('role', params.role);
+    if (params.roleId) qs.set('roleId', params.roleId);
     if (params.skills && params.skills.length > 0)
       qs.set('skills', params.skills.join(','));
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
@@ -88,4 +88,8 @@ export const attendeesApi = {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+};
+
+export const rolesApi = {
+  list: () => request<Role[]>('/roles'),
 };

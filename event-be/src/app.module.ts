@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { EventsModule } from './events/events.module';
 import { AttendeesModule } from './attendees/attendees.module';
 import { ConciergeModule } from './concierge/concierge.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ConciergeModule } from './concierge/concierge.module';
     EventsModule,
     AttendeesModule,
     ConciergeModule,
+    RolesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

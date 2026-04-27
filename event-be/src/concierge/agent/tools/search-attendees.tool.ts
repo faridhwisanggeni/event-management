@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AttendeeRole, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { LlmService } from '../../../llm/llm.service';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -64,22 +64,24 @@ export class SearchAttendeesTool {
             name: string;
             headline: string | null;
             company: string | null;
-            role: string | null;
+            role_code: string | null;
             skills: string[];
             looking_for: string | null;
             distance: number;
           }>
         >(Prisma.sql`
-          SELECT id, name, headline, company, role::text AS role, skills, looking_for,
-                 (embedding <=> ${literal}::vector) AS distance
-          FROM attendees
-          WHERE event_id = ${ctx.eventId}::uuid
-            AND id <> ${ctx.askerAttendeeId}::uuid
-            AND open_to_chat = TRUE
-            AND embedding IS NOT NULL
-            ${roles ? Prisma.sql`AND role::text = ANY(${roles})` : Prisma.empty}
-            ${skills ? Prisma.sql`AND skills && ${skills}` : Prisma.empty}
-          ORDER BY embedding <=> ${literal}::vector ASC
+          SELECT a.id, a.name, a.headline, a.company,
+                 r.code AS role_code, a.skills, a.looking_for,
+                 (a.embedding <=> ${literal}::vector) AS distance
+          FROM attendees a
+          LEFT JOIN attendee_roles r ON r.id = a.role_id
+          WHERE a.event_id = ${ctx.eventId}::uuid
+            AND a.id <> ${ctx.askerAttendeeId}::uuid
+            AND a.open_to_chat = TRUE
+            AND a.embedding IS NOT NULL
+            ${roles ? Prisma.sql`AND r.code = ANY(${roles})` : Prisma.empty}
+            ${skills ? Prisma.sql`AND a.skills && ${skills}` : Prisma.empty}
+          ORDER BY a.embedding <=> ${literal}::vector ASC
           LIMIT ${limit}
         `);
 
@@ -91,7 +93,7 @@ export class SearchAttendeesTool {
               name: r.name,
               headline: r.headline,
               company: r.company,
-              role: r.role,
+              role: r.role_code,
               skills: r.skills,
               lookingFor: r.looking_for,
               similarity: 1 - Number(r.distance),
@@ -108,14 +110,12 @@ export class SearchAttendeesTool {
       openToChat: true,
       id: { not: ctx.askerAttendeeId },
     };
-    if (roles) {
-      const validRoles = roles.filter((r): r is AttendeeRole => r in AttendeeRole);
-      if (validRoles.length) where.role = { in: validRoles };
-    }
+    if (roles) where.role = { code: { in: roles } };
     if (skills) where.skills = { hasSome: skills };
 
     const data = await this.prisma.attendee.findMany({
       where,
+      include: { role: true },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -127,7 +127,7 @@ export class SearchAttendeesTool {
         name: a.name,
         headline: a.headline,
         company: a.company,
-        role: a.role,
+        role: a.role?.code ?? null,
         skills: a.skills,
         lookingFor: a.lookingFor,
         similarity: null,
