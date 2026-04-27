@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eventmgmt-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eventmgmt
+      POSTGRES_PASSWORD: eventmgmt
+      POSTGRES_DB: eventmgmt
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventmgmt -d eventmgmt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./event-be
+      dockerfile: Dockerfile
+    container_name: eventmgmt-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      LOG_LEVEL: info
+      # NB: hostname `postgres` is the service name on the compose network.
+      DATABASE_URL: postgresql://eventmgmt:eventmgmt@postgres:5432/eventmgmt?schema=public
+      # Comma-separated allow-list of browser origins permitted to call the API.
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "3001:3001"
+
+  web:
+    build:
+      context: ./event-fe
+      dockerfile: Dockerfile
+      args:
+        # Browser will hit the API on the host port (compose maps 3001 → host).
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:3001/api/v1
+    container_name: eventmgmt-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:

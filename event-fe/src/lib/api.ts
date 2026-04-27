@@ -1,0 +1,91 @@
+import type { ApiError, Attendee, AttendeeRole, Event, Paginated } from './types';
+
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1';
+
+export class ApiRequestError extends Error {
+  status: number;
+  payload: ApiError | null;
+  constructor(message: string, status: number, payload: ApiError | null) {
+    super(message);
+    this.status = status;
+    this.payload = payload;
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...(init.headers ?? {}),
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    let payload: ApiError | null = null;
+    try {
+      payload = (await res.json()) as ApiError;
+    } catch {
+      payload = null;
+    }
+    const msg = Array.isArray(payload?.message)
+      ? payload?.message.join(', ')
+      : (payload?.message ?? res.statusText);
+    throw new ApiRequestError(msg ?? 'Request failed', res.status, payload);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export interface CreateEventInput {
+  title: string;
+  location: string;
+  startsAt: string;
+  endsAt: string;
+}
+
+export const eventsApi = {
+  list: () => request<Event[]>('/events'),
+  get: (id: string) => request<Event>(`/events/${id}`),
+  create: (input: CreateEventInput) =>
+    request<Event>('/events', { method: 'POST', body: JSON.stringify(input) }),
+};
+
+export interface CreateAttendeeInput {
+  name: string;
+  headline?: string;
+  bio?: string;
+  company?: string;
+  role?: AttendeeRole;
+  skills?: string[];
+  lookingFor?: string;
+  openToChat?: boolean;
+}
+
+export interface ListAttendeesParams {
+  page?: number;
+  pageSize?: number;
+  role?: AttendeeRole;
+  skills?: string[];
+}
+
+export const attendeesApi = {
+  list: (eventId: string, params: ListAttendeesParams = {}) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set('page', String(params.page));
+    if (params.pageSize) qs.set('pageSize', String(params.pageSize));
+    if (params.role) qs.set('role', params.role);
+    if (params.skills && params.skills.length > 0)
+      qs.set('skills', params.skills.join(','));
+    const suffix = qs.toString() ? `?${qs.toString()}` : '';
+    return request<Paginated<Attendee>>(`/events/${eventId}/attendees${suffix}`);
+  },
+  create: (eventId: string, input: CreateAttendeeInput) =>
+    request<Attendee>(`/events/${eventId}/attendees`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+};
