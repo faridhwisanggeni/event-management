@@ -1,4 +1,11 @@
-import type { ApiError, Attendee, Event, Paginated, Role } from './types';
+import type {
+  ApiError,
+  Attendee,
+  ConciergeTurnResponse,
+  Event,
+  Paginated,
+  Role,
+} from './types';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:3001/api/v1';
@@ -92,4 +99,12 @@ export const attendeesApi = {
 
 export const rolesApi = {
   list: () => request<Role[]>('/roles'),
+};
+
+export const conciergeApi = {
+  send: (eventId: string, attendeeId: string, message: string) =>
+    request<ConciergeTurnResponse>(`/events/${eventId}/concierge/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ attendee_id: attendeeId, message }),
+    }),
 };

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, CalendarRange, Loader2, MapPin, Search, Users, X } from 'lucide-react';
+import { ArrowLeft, CalendarRange, Loader2, MapPin, Search, Sparkles, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -165,6 +165,12 @@ export default function EventDetailPage() {
               Clear
             </Button>
           )}
+          <Button asChild variant="outline">
+            <Link href={`/events/${id}/concierge`}>
+              <Sparkles className="mr-1" />
+              Ask Concierge
+            </Link>
+          </Button>
           <RegisterAttendeeDialog eventId={id} />
         </div>
       </div>

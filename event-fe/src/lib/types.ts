@@ -45,6 +45,32 @@ export interface Paginated<T> {
   };
 }
 
+export interface ConciergeCandidate {
+  id: string;
+  name?: string;
+  headline?: string | null;
+  company?: string | null;
+  role?: string | null;
+  skills?: string[];
+  lookingFor?: string | null;
+  similarity?: number | null;
+}
+
+export interface ConciergeMatch {
+  candidate: ConciergeCandidate;
+  score: number;
+  rationale: string;
+  shared_ground: string[];
+  draft_intro: string | null;
+}
+
+export interface ConciergeTurnResponse {
+  session_id: string;
+  message_id: string;
+  reply: string;
+  matches: ConciergeMatch[] | null;
+}
+
 export interface ApiError {
   statusCode: number;
   error: string;
