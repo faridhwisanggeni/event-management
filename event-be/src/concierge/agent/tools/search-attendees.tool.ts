@@ -1,0 +1,137 @@
+import { Injectable } from '@nestjs/common';
+import { AttendeeRole, Prisma } from '@prisma/client';
+
+import { LlmService } from '../../../llm/llm.service';
+import { PrismaService } from '../../../prisma/prisma.service';
+
+export interface SearchAttendeesInput {
+  query: string;
+  roles?: string[];
+  skills?: string[];
+  limit?: number;
+}
+
+export interface SearchAttendeesCandidate {
+  id: string;
+  name: string;
+  headline: string | null;
+  company: string | null;
+  role: string | null;
+  skills: string[];
+  lookingFor: string | null;
+  similarity: number | null;
+}
+
+export interface SearchAttendeesResult {
+  candidates: SearchAttendeesCandidate[];
+  mode: 'semantic+keyword' | 'keyword-only';
+}
+
+/**
+ * Hybrid attendee search.
+ *
+ * - When the LLM is enabled and embeddings exist, we rank by cosine distance
+ *   on `attendees.embedding` (pgvector ivfflat) and apply role/skill filters
+ *   inside the same SQL query for index-friendly execution.
+ * - When embeddings aren't available we fall back to keyword/role/skills
+ *   filtering with Prisma — still useful for the agent.
+ *
+ * The asker is always excluded from results.
+ */
+@Injectable()
+export class SearchAttendeesTool {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly llm: LlmService,
+  ) {}
+
+  async run(
+    input: SearchAttendeesInput,
+    ctx: { eventId: string; askerAttendeeId: string },
+  ): Promise<SearchAttendeesResult> {
+    const limit = Math.min(Math.max(input.limit ?? 5, 1), 20);
+    const roles = input.roles?.length ? input.roles : null;
+    const skills = input.skills?.length ? input.skills : null;
+
+    if (this.llm.isEnabled()) {
+      try {
+        const queryVec = await this.llm.embed(input.query);
+        const literal = `[${queryVec.join(',')}]`;
+
+        const rows = await this.prisma.$queryRaw<
+          Array<{
+            id: string;
+            name: string;
+            headline: string | null;
+            company: string | null;
+            role: string | null;
+            skills: string[];
+            looking_for: string | null;
+            distance: number;
+          }>
+        >(Prisma.sql`
+          SELECT id, name, headline, company, role::text AS role, skills, looking_for,
+                 (embedding <=> ${literal}::vector) AS distance
+          FROM attendees
+          WHERE event_id = ${ctx.eventId}::uuid
+            AND id <> ${ctx.askerAttendeeId}::uuid
+            AND open_to_chat = TRUE
+            AND embedding IS NOT NULL
+            ${roles ? Prisma.sql`AND role::text = ANY(${roles})` : Prisma.empty}
+            ${skills ? Prisma.sql`AND skills && ${skills}` : Prisma.empty}
+          ORDER BY embedding <=> ${literal}::vector ASC
+          LIMIT ${limit}
+        `);
+
+        if (rows.length > 0) {
+          return {
+            mode: 'semantic+keyword',
+            candidates: rows.map((r) => ({
+              id: r.id,
+              name: r.name,
+              headline: r.headline,
+              company: r.company,
+              role: r.role,
+              skills: r.skills,
+              lookingFor: r.looking_for,
+              similarity: 1 - Number(r.distance),
+            })),
+          };
+        }
+      } catch {
+        // fall through to keyword path
+      }
+    }
+
+    const where: Prisma.AttendeeWhereInput = {
+      eventId: ctx.eventId,
+      openToChat: true,
+      id: { not: ctx.askerAttendeeId },
+    };
+    if (roles) {
+      const validRoles = roles.filter((r): r is AttendeeRole => r in AttendeeRole);
+      if (validRoles.length) where.role = { in: validRoles };
+    }
+    if (skills) where.skills = { hasSome: skills };
+
+    const data = await this.prisma.attendee.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    return {
+      mode: 'keyword-only',
+      candidates: data.map((a) => ({
+        id: a.id,
+        name: a.name,
+        headline: a.headline,
+        company: a.company,
+        role: a.role,
+        skills: a.skills,
+        lookingFor: a.lookingFor,
+        similarity: null,
+      })),
+    };
+  }
+}
