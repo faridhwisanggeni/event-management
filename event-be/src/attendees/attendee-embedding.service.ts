@@ -64,4 +64,39 @@ export class AttendeeEmbeddingService {
       this.logger.warn({ msg: 'attendee.embedding.failed', attendeeId, err: (err as Error).message });
     }
   }
+
+  /**
+   * Re-embed every attendee in an event whose `embedding` column is NULL.
+   * Useful after the first boot where `OPENAI_API_KEY` was absent, so the
+   * fire-and-forget generation at create-time silently skipped.
+   *
+   * Runs sequentially to avoid spiking OpenAI rate limits on larger events.
+   * Returns counts for the caller to surface.
+   */
+  async backfillMissing(eventId: string): Promise<{ attempted: number; updated: number }> {
+    if (!this.llm.isEnabled()) {
+      throw new Error('LLM is not configured — set OPENAI_API_KEY to backfill embeddings.');
+    }
+
+    const targets = await this.prisma.$queryRawUnsafe<Array<{ id: string }>>(
+      `SELECT id FROM "attendees" WHERE "event_id" = $1::uuid AND "embedding" IS NULL`,
+      eventId,
+    );
+
+    let updated = 0;
+    for (const { id } of targets) {
+      const before = await this.prisma.$queryRawUnsafe<Array<{ has_embedding: boolean }>>(
+        `SELECT (embedding IS NOT NULL) AS has_embedding FROM "attendees" WHERE id = $1::uuid`,
+        id,
+      );
+      await this.upsertForAttendee(id);
+      const after = await this.prisma.$queryRawUnsafe<Array<{ has_embedding: boolean }>>(
+        `SELECT (embedding IS NOT NULL) AS has_embedding FROM "attendees" WHERE id = $1::uuid`,
+        id,
+      );
+      if (!before[0]?.has_embedding && after[0]?.has_embedding) updated += 1;
+    }
+
+    return { attempted: targets.length, updated };
+  }
 }

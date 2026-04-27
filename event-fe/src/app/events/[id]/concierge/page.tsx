@@ -5,17 +5,21 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Bot,
+  Check,
   Copy,
   Loader2,
+  RefreshCw,
   Send,
   Sparkles,
+  ThumbsDown,
+  ThumbsUp,
   User as UserIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 
-import { attendeesApi, conciergeApi, eventsApi } from '@/lib/api';
+import { adminApi, attendeesApi, conciergeApi, eventsApi } from '@/lib/api';
 import type { ConciergeMatch } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +39,8 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   matches?: ConciergeMatch[] | null;
+  /** Last submitted rating, if any. 5 = thumbs up, 1 = thumbs down. */
+  rating?: 1 | 5;
 }
 
 const SUGGESTED_PROMPTS = [
@@ -75,6 +81,17 @@ export default function ConciergePage() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
+
+  const backfill = useMutation({
+    mutationFn: () => adminApi.backfillEmbeddings(eventId),
+    onSuccess: (res) =>
+      toast.success(
+        res.attempted === 0
+          ? 'All attendees already have embeddings'
+          : `Rebuilt ${res.updated}/${res.attempted} embedding${res.attempted === 1 ? '' : 's'}`,
+      ),
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const mutation = useMutation({
     mutationFn: (message: string) => {
@@ -129,6 +146,20 @@ export default function ConciergePage() {
             {eventQuery.data?.title ?? 'Loading event…'} · find people worth meeting and get a draft intro.
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={backfill.isPending}
+          onClick={() => backfill.mutate()}
+          title="Re-embed attendees missing a vector (e.g. registered before OPENAI_API_KEY was set)"
+        >
+          {backfill.isPending ? (
+            <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-1 h-4 w-4" />
+          )}
+          Rebuild embeddings
+        </Button>
       </div>
 
       {/* Asker picker — required so the agent knows whose perspective to take. */}
@@ -178,7 +209,19 @@ export default function ConciergePage() {
             m.role === 'user' ? (
               <UserBubble key={m.id} text={m.content} />
             ) : (
-              <AssistantBubble key={m.id} text={m.content} matches={m.matches ?? null} />
+              <AssistantBubble
+                key={m.id}
+                eventId={eventId}
+                messageId={m.id}
+                text={m.content}
+                matches={m.matches ?? null}
+                initialRating={m.rating}
+                onRated={(rating) =>
+                  setMessages((prev) =>
+                    prev.map((x) => (x.id === m.id ? { ...x, rating } : x)),
+                  )
+                }
+              />
             ),
           )}
 
@@ -285,12 +328,23 @@ function UserBubble({ text }: { text: string }) {
 }
 
 function AssistantBubble({
+  eventId,
+  messageId,
   text,
   matches,
+  initialRating,
+  onRated,
 }: {
+  eventId: string;
+  messageId: string;
   text: string;
   matches: ConciergeMatch[] | null;
+  initialRating?: 1 | 5;
+  onRated: (rating: 1 | 5) => void;
 }) {
+  // Local-only message (e.g. the LLM-offline stub) starts with a `local-`
+  // prefix; the BE has no row to attach feedback to, so we hide the buttons.
+  const canRate = !messageId.startsWith('local-');
   return (
     <div className="flex gap-2">
       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
@@ -307,7 +361,106 @@ function AssistantBubble({
             ))}
           </div>
         )}
+        {canRate && (
+          <FeedbackBar
+            eventId={eventId}
+            messageId={messageId}
+            initialRating={initialRating}
+            onRated={onRated}
+          />
+        )}
       </div>
+    </div>
+  );
+}
+
+function FeedbackBar({
+  eventId,
+  messageId,
+  initialRating,
+  onRated,
+}: {
+  eventId: string;
+  messageId: string;
+  initialRating?: 1 | 5;
+  onRated: (rating: 1 | 5) => void;
+}) {
+  const [current, setCurrent] = useState<1 | 5 | undefined>(initialRating);
+  const [showNotes, setShowNotes] = useState(false);
+  const [notes, setNotes] = useState('');
+
+  const submit = useMutation({
+    mutationFn: ({ rating, notes }: { rating: 1 | 5; notes?: string }) =>
+      conciergeApi.sendFeedback(eventId, messageId, rating, notes),
+    onSuccess: (_res, vars) => {
+      setCurrent(vars.rating);
+      onRated(vars.rating);
+      if (vars.notes) {
+        setShowNotes(false);
+        setNotes('');
+        toast.success('Thanks — feedback saved with note');
+      } else {
+        toast.success('Thanks for the feedback');
+      }
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  return (
+    <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1">
+        <span>Was this helpful?</span>
+        <Button
+          size="sm"
+          variant={current === 5 ? 'secondary' : 'ghost'}
+          className="h-7 px-2"
+          disabled={submit.isPending}
+          onClick={() => submit.mutate({ rating: 5 })}
+          aria-label="Thumbs up"
+        >
+          <ThumbsUp className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="sm"
+          variant={current === 1 ? 'secondary' : 'ghost'}
+          className="h-7 px-2"
+          disabled={submit.isPending}
+          onClick={() => submit.mutate({ rating: 1 })}
+          aria-label="Thumbs down"
+        >
+          <ThumbsDown className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2"
+          disabled={submit.isPending || !current}
+          onClick={() => setShowNotes((v) => !v)}
+          title={current ? 'Add a note' : 'Pick a rating first'}
+        >
+          {showNotes ? 'Hide note' : 'Add note'}
+        </Button>
+        {current && !submit.isPending && <Check className="h-3.5 w-3.5 text-emerald-600" />}
+        {submit.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+      </div>
+      {showNotes && current && (
+        <div className="flex items-end gap-2">
+          <Textarea
+            rows={2}
+            placeholder="What could be better?"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="min-h-[44px] resize-none text-sm"
+          />
+          <Button
+            size="sm"
+            disabled={!notes.trim() || submit.isPending}
+            onClick={() => submit.mutate({ rating: current, notes: notes.trim() })}
+          >
+            Save
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

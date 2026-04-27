@@ -123,6 +123,35 @@ export class ConciergeService {
     };
   }
 
+  /**
+   * Upsert feedback for an assistant message. Only ASSISTANT rows can receive
+   * feedback (rating user messages doesn't make sense). The unique index on
+   * `messageId` lets a user change their mind without proliferating rows.
+   */
+  async upsertFeedback(
+    eventId: string,
+    messageId: string,
+    rating: number,
+    notes: string | undefined,
+  ) {
+    const message = await this.prisma.conciergeMessage.findUnique({
+      where: { id: messageId },
+      include: { session: true },
+    });
+    if (!message || message.session.eventId !== eventId) {
+      throw new NotFoundException('Message not found in this event');
+    }
+    if (message.role !== ConciergeRole.ASSISTANT) {
+      throw new BadRequestException('Only assistant messages can receive feedback');
+    }
+
+    return this.prisma.feedback.upsert({
+      where: { messageId },
+      create: { messageId, rating, notes: notes ?? null },
+      update: { rating, notes: notes ?? null },
+    });
+  }
+
   /** Replay persisted messages into the OpenAI message format for resume. */
   private async loadHistory(sessionId: string): Promise<ChatCompletionMessageParam[]> {
     const rows = await this.prisma.conciergeMessage.findMany({

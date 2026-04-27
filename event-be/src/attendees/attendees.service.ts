@@ -75,4 +75,9 @@ export class AttendeesService {
       },
     };
   }
+
+  async backfillEmbeddings(eventId: string): Promise<{ attempted: number; updated: number }> {
+    await this.events.assertExists(eventId);
+    return this.embeddings.backfillMissing(eventId);
+  }
 }

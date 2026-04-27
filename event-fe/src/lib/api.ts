@@ -101,10 +101,37 @@ export const rolesApi = {
   list: () => request<Role[]>('/roles'),
 };
 
+export const adminApi = {
+  backfillEmbeddings: (eventId: string) =>
+    request<{ attempted: number; updated: number }>(
+      `/events/${eventId}/attendees/backfill-embeddings`,
+      { method: 'POST' },
+    ),
+};
+
+export interface ConciergeFeedback {
+  id: string;
+  rating: number;
+  notes: string | null;
+}
+
 export const conciergeApi = {
   send: (eventId: string, attendeeId: string, message: string) =>
     request<ConciergeTurnResponse>(`/events/${eventId}/concierge/messages`, {
       method: 'POST',
       body: JSON.stringify({ attendee_id: attendeeId, message }),
     }),
+  sendFeedback: (
+    eventId: string,
+    messageId: string,
+    rating: number,
+    notes?: string,
+  ) =>
+    request<ConciergeFeedback>(
+      `/events/${eventId}/concierge/messages/${messageId}/feedback`,
+      {
+        method: 'POST',
+        body: JSON.stringify(notes ? { rating, notes } : { rating }),
+      },
+    ),
 };

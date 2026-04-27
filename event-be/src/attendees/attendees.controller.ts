@@ -36,4 +36,17 @@ export class AttendeesController {
   ): Promise<Paginated<Attendee>> {
     return this.attendees.list(eventId, query);
   }
+
+  /**
+   * Dev/ops helper: re-embed every attendee whose vector is NULL. Safe to
+   * call repeatedly. Handy after adding OPENAI_API_KEY to an already-running
+   * instance.
+   */
+  @Post('backfill-embeddings')
+  @HttpCode(HttpStatus.OK)
+  backfillEmbeddings(
+    @Param('eventId', new ParseUUIDPipe({ version: '4' })) eventId: string,
+  ): Promise<{ attempted: number; updated: number }> {
+    return this.attendees.backfillEmbeddings(eventId);
+  }
 }
