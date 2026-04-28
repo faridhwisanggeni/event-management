@@ -35,6 +35,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   >
                     Events
                   </Link>
+                  <Link
+                    href="/attendees"
+                    className="rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    Attendees
+                  </Link>
                 </nav>
               </div>
             </header>
