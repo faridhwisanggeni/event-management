@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,6 +45,17 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const EMPTY_FORM: FormValues = {
+  name: '',
+  headline: '',
+  bio: '',
+  company: '',
+  roleId: '',
+  skills: '',
+  lookingFor: '',
+  openToChat: true,
+};
+
 interface Props {
   eventId: string;
 }
@@ -56,8 +67,12 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', openToChat: true },
+    defaultValues: EMPTY_FORM,
   });
+
+  useEffect(() => {
+    if (open) form.reset(EMPTY_FORM);
+  }, [open, form]);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -76,7 +91,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
     onSuccess: (a) => {
       toast.success(`${a.name} registered`);
       queryClient.invalidateQueries({ queryKey: ['attendees', eventId] });
-      form.reset({ name: '', openToChat: true });
+      form.reset(EMPTY_FORM);
       setOpen(false);
     },
     onError: (err: Error) => toast.error(err.message),
@@ -100,18 +115,19 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
         <form
           onSubmit={form.handleSubmit((values) => mutation.mutate(values))}
           className="space-y-4"
+          autoComplete="off"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" placeholder="Asani Suryana" {...form.register('name')} />
+              <Input id="name" placeholder="Asani Suryana" autoComplete="off" {...form.register('name')} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
-              <Input id="company" placeholder="Acme Inc" {...form.register('company')} />
+              <Input id="company" placeholder="Acme Inc" autoComplete="off" {...form.register('company')} />
             </div>
           </div>
 
@@ -120,6 +136,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
             <Input
               id="headline"
               placeholder="Senior Backend Engineer @ Acme"
+              autoComplete="off"
               {...form.register('headline')}
             />
           </div>
@@ -150,7 +167,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="skills">Skills (comma-separated)</Label>
-              <Input id="skills" placeholder="nestjs, postgres, ai" {...form.register('skills')} />
+              <Input id="skills" placeholder="nestjs, postgres, ai" autoComplete="off" {...form.register('skills')} />
             </div>
           </div>
 
@@ -160,6 +177,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
               id="bio"
               rows={3}
               placeholder="Short professional bio..."
+              autoComplete="off"
               {...form.register('bio')}
             />
           </div>
@@ -170,6 +188,7 @@ export function RegisterAttendeeDialog({ eventId }: Props) {
               id="lookingFor"
               rows={2}
               placeholder="What you hope to find at this event..."
+              autoComplete="off"
               {...form.register('lookingFor')}
             />
           </div>

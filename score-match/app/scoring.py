@@ -7,10 +7,11 @@ from typing import Iterable, List, Optional, Set, Tuple
 from .schemas import AttendeeProfile, ScoreResponse
 
 WEIGHTS = {
-    "role_complement": 30,
+    "role_complement": 25,
     "skill_overlap": 25,
-    "intent_term_overlap": 30,
-    "open_to_chat_baseline": 15,
+    "intent_term_overlap": 35,
+    "open_to_chat_baseline": 10,
+    "seniority_conflict": 20,
 }
 
 _STOPWORDS: Set[str] = {
@@ -18,6 +19,17 @@ _STOPWORDS: Set[str] = {
     "has", "have", "i", "in", "is", "it", "its", "looking", "me", "my",
     "of", "on", "or", "that", "the", "this", "to", "want", "who", "with",
     "you", "your", "find", "someone", "anyone", "would", "like",
+    "more", "than", "one", "two", "three", "year", "years", "experience",
+    "score", "up", "down", "over", "under", "least", "any",
+}
+
+_SENIORITY_GROUPS: dict[str, Set[str]] = {
+    "junior": {"junior", "jr", "entry", "intern", "fresher", "fresh", "beginner", "trainee"},
+    "mid": {"mid", "intermediate", "midlevel"},
+    "senior": {
+        "senior", "sr", "lead", "principal", "staff", "head", "chief",
+        "director", "vp", "cto", "executive",
+    },
 }
 
 _TOKEN_RE = re.compile(r"[a-z0-9+]+")
@@ -39,21 +51,24 @@ def _profile_text(p: AttendeeProfile) -> str:
     ]
     return " ".join(parts)
 
-def _role_complement(asker: Optional[AttendeeProfile], candidate: AttendeeProfile,
+def _candidate_text_tokens(candidate: AttendeeProfile) -> Set[str]:
+    return (
+        _tokens(candidate.role)
+        | _tokens(candidate.roleCode)
+        | _tokens(candidate.headline)
+        | _tokens(candidate.bio)
+        | _tokens(candidate.lookingFor)
+    )
+
+def _role_complement(candidate: AttendeeProfile,
                      intent_tokens: Set[str]) -> Tuple[float, Optional[str]]:
-    cand_role_tokens = _tokens(candidate.role) | _tokens(candidate.roleCode) | _tokens(candidate.headline)
-    if not cand_role_tokens:
+    cand_tokens = _candidate_text_tokens(candidate)
+    if not cand_tokens or not intent_tokens:
         return 0.0, None
 
-    looking_for_tokens = _tokens(asker.lookingFor) if asker else set()
-    overlap_lf = cand_role_tokens & looking_for_tokens
-    overlap_intent = cand_role_tokens & intent_tokens
-
-    overlap = overlap_lf | overlap_intent
+    overlap = cand_tokens & intent_tokens
     if not overlap:
         return 0.0, None
-
-
 
     pts = WEIGHTS["role_complement"] if len(overlap) >= 2 else WEIGHTS["role_complement"] * 0.6
     label = ", ".join(sorted(overlap))
@@ -86,6 +101,27 @@ def _intent_term_overlap(intent_tokens: Set[str],
     pts = coverage * WEIGHTS["intent_term_overlap"]
     return pts, matched
 
+def _seniority_conflict(candidate: AttendeeProfile,
+                        intent_tokens: Set[str]) -> Tuple[float, Optional[str]]:
+    intent_levels = {g for g, terms in _SENIORITY_GROUPS.items() if terms & intent_tokens}
+    if not intent_levels:
+        return 0.0, None
+
+    cand_tokens = _candidate_text_tokens(candidate)
+    cand_levels = {g for g, terms in _SENIORITY_GROUPS.items() if terms & cand_tokens}
+    if not cand_levels:
+        return 0.0, None
+
+    if intent_levels & cand_levels:
+        return 0.0, None
+
+    intent_label = "/".join(sorted(intent_levels))
+    cand_label = "/".join(sorted(cand_levels))
+    return (
+        -float(WEIGHTS["seniority_conflict"]),
+        f"seniority mismatch: looking for {intent_label} but profile reads {cand_label}",
+    )
+
 @dataclass
 class _Component:
     name: str
@@ -99,12 +135,10 @@ def score_match(asker: Optional[AttendeeProfile],
     components: List[_Component] = []
     shared_ground: List[str] = []
 
-
-    pts, detail = _role_complement(asker, candidate, intent_tokens)
+    pts, detail = _role_complement(candidate, intent_tokens)
     if pts > 0 and detail:
         components.append(_Component("role_complement", pts, detail))
         shared_ground.append(detail)
-
 
     pts, overlapping = _skill_overlap(asker, candidate)
     if overlapping:
@@ -112,8 +146,6 @@ def score_match(asker: Optional[AttendeeProfile],
             _Component("skill_overlap", pts, f"shared skills: {', '.join(overlapping)}")
         )
         shared_ground.extend(f"both work with {s}" for s in overlapping)
-
-
 
     pts, matched_terms = _intent_term_overlap(intent_tokens, candidate)
     if matched_terms:
@@ -125,11 +157,15 @@ def score_match(asker: Optional[AttendeeProfile],
             )
         )
 
-
-    if candidate.openToChat:
+    has_positive_signal = any(c.points > 0 for c in components)
+    if candidate.openToChat and has_positive_signal:
         components.append(_Component("open_to_chat_baseline",
                                      float(WEIGHTS["open_to_chat_baseline"]),
                                      "candidate is open to chat"))
+
+    pts, detail = _seniority_conflict(candidate, intent_tokens)
+    if pts < 0 and detail:
+        components.append(_Component("seniority_conflict", pts, detail))
 
     raw_total = sum(c.points for c in components)
     score = int(round(max(0.0, min(100.0, raw_total))))
@@ -150,8 +186,11 @@ def _build_rationale(components: List[_Component], score: int,
             "profile. Score reflects an absence of overlap rather than a negative."
         )
 
-    top = sorted(components, key=lambda c: c.points, reverse=True)[:3]
-    parts = "; ".join(f"{c.detail} (+{int(round(c.points))})" for c in top)
+    ranked = sorted(components, key=lambda c: abs(c.points), reverse=True)[:3]
+    parts = "; ".join(
+        f"{c.detail} ({'+' if c.points >= 0 else '-'}{int(round(abs(c.points)))})"
+        for c in ranked
+    )
     return f"Score {score}/100 — {parts}."
 
 def _dedupe(items: Iterable[str]) -> List[str]:
