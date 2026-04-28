@@ -18,7 +18,7 @@ app = FastAPI(
     title="score_match",
     version="1.0.0",
     description=(
-        "Stateless scoring microservice for the MyConnect concierge agent. "
+        "Stateless scoring microservice for concierge agent. "
         "Given an asker, a candidate, and the asker's intent, returns a 0–100 "
         "match score with a human-readable rationale and shared-ground list."
     ),
