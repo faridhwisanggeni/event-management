@@ -1,5 +1,3 @@
-"""HTTP integration tests for the FastAPI app via Starlette TestClient."""
-
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
@@ -8,12 +6,10 @@ from app.main import app
 
 client = TestClient(app)
 
-
 def test_healthz():
     r = client.get("/healthz")
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
-
 
 def test_score_endpoint_happy_path():
     r = client.post(
@@ -39,8 +35,7 @@ def test_score_endpoint_happy_path():
     assert body["rationale"]
     assert isinstance(body["shared_ground"], list)
 
-
 def test_score_endpoint_validation_error():
-    # Missing required fields -> 422.
+
     r = client.post("/score", json={"intent": "no candidate"})
     assert r.status_code == 422

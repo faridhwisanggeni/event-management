@@ -33,7 +33,7 @@ export class AttendeesService {
       },
     });
 
-    // Fire-and-forget; embedding failures are logged inside the service.
+
     void this.embeddings.upsertForAttendee(attendee.id);
 
     return attendee;

@@ -40,7 +40,7 @@ export class ConciergeService {
       update: {},
     });
 
-    // Persist the user message first so a crashing LLM call doesn't lose it.
+
     await this.prisma.conciergeMessage.create({
       data: {
         sessionId: session.id,
@@ -73,7 +73,7 @@ export class ConciergeService {
       askerAttendeeId: attendeeId,
     });
 
-    // Persist all new messages atomically + return the final assistant message.
+
     let finalMessage: ConciergeMessage | null = null;
     await this.prisma.$transaction(async (tx) => {
       for (let i = 0; i < turn.newMessages.length; i++) {
@@ -123,11 +123,8 @@ export class ConciergeService {
     };
   }
 
-  /**
-   * Upsert feedback for an assistant message. Only ASSISTANT rows can receive
-   * feedback (rating user messages doesn't make sense). The unique index on
-   * `messageId` lets a user change their mind without proliferating rows.
-   */
+
+
   async upsertFeedback(
     eventId: string,
     messageId: string,
@@ -152,7 +149,7 @@ export class ConciergeService {
     });
   }
 
-  /** Replay persisted messages into the OpenAI message format for resume. */
+
   private async loadHistory(sessionId: string): Promise<ChatCompletionMessageParam[]> {
     const rows = await this.prisma.conciergeMessage.findMany({
       where: { sessionId },
@@ -182,7 +179,7 @@ export class ConciergeService {
           }
           break;
         case ConciergeRole.SYSTEM:
-          // System prompt is added by AgentRunner; skip persisted system rows.
+
           break;
       }
     }

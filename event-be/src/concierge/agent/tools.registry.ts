@@ -1,11 +1,5 @@
 import type { ChatCompletionTool } from 'openai/resources/chat/completions';
 
-/**
- * OpenAI tool/function-call schema for the concierge agent.
- *
- * Schemas are intentionally tight — we want the model to fill structured
- * args and we validate them on the way in. No regex parsing of free text.
- */
 export const CONCIERGE_TOOLS: ChatCompletionTool[] = [
   {
     type: 'function',

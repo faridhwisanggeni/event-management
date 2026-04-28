@@ -17,10 +17,8 @@ export class ConciergeController {
     return this.concierge.postMessage(eventId, dto.attendee_id, dto.message);
   }
 
-  /**
-   * Rate an assistant turn. Idempotent: re-posting overwrites the existing
-   * row (one feedback per message — see Prisma `@unique` on `messageId`).
-   */
+
+
   @Post('messages/:messageId/feedback')
   @HttpCode(200)
   async postFeedback(

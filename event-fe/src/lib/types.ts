@@ -26,7 +26,7 @@ export interface Attendee {
   bio: string | null;
   company: string | null;
   roleId: string | null;
-  /** Included when the endpoint joins the Role relation. */
+
   role?: Role | null;
   skills: string[];
   lookingFor: string | null;

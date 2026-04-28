@@ -26,7 +26,7 @@ export interface PersistedToolCall {
 }
 
 export interface AgentTurnResult {
-  /** Chronological list of new messages produced this turn (assistant + tool rows). */
+
   newMessages: Array<
     | {
         role: 'ASSISTANT';
@@ -43,15 +43,15 @@ export interface AgentTurnResult {
         content: string;
       }
   >;
-  /** Final assistant text (the user-visible reply). */
+
   finalText: string;
-  /** Structured matches payload extracted from tool results, attached to the final message. */
+
   matches: unknown;
 }
 
 function buildSystemPrompt(roleCodes: string[]): string {
-  // We surface the exact role codes so the LLM can't invent values like
-  // "Engineer" or "AI" which would silently filter to zero rows in SQL.
+
+
   const roleList = roleCodes.length
     ? roleCodes.join(', ')
     : '(none configured)';
@@ -84,12 +84,6 @@ Hard rules:
 - If the user asks something off-topic, politely redirect to networking help.`;
 }
 
-/**
- * Multi-turn agent loop using OpenAI native tool calling.
- *
- * The loop persists nothing itself — it returns the newly produced messages so
- * the caller (`ConciergeService`) can persist them inside a transaction.
- */
 @Injectable()
 export class AgentRunner {
   private readonly logger = new Logger(AgentRunner.name);
@@ -112,8 +106,8 @@ export class AgentRunner {
     userMessage: string,
     ctx: AgentTurnContext,
   ): Promise<AgentTurnResult> {
-    // Fetch active role codes once per turn so the LLM sees the source of
-    // truth. Cheap query (handful of rows, indexed).
+
+
     const roleRows = await this.prisma.role.findMany({
       where: { isActive: true },
       select: { code: true },
@@ -149,7 +143,7 @@ export class AgentRunner {
         latencyMs,
       });
 
-      // Echo into history for the next iteration.
+
       messages.push({
         role: 'assistant',
         content: assistantMsg.content ?? '',
@@ -227,11 +221,8 @@ export class AgentRunner {
     }
   }
 
-  /**
-   * Compose the structured `matches` payload that we attach to the final
-   * assistant message. We join score_match + draft_intro_message results by
-   * candidate id, and enrich with the search_attendees row when available.
-   */
+
+
   private buildMatches(toolResultsByName: Record<string, unknown[]>): unknown {
     const searches = (toolResultsByName.search_attendees ?? []) as Array<{
       candidates?: Array<{ id: string; [k: string]: unknown }>;

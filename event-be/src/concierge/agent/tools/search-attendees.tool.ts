@@ -25,24 +25,11 @@ export interface SearchAttendeesCandidate {
 export interface SearchAttendeesResult {
   candidates: SearchAttendeesCandidate[];
   mode: 'semantic+keyword' | 'semantic-only' | 'keyword-only';
-  /**
-   * If we ignored the LLM-supplied filters because they yielded zero results,
-   * we record what was dropped so the agent can avoid repeating itself.
-   */
+
+
   filtersDropped?: { roles?: boolean; skills?: boolean };
 }
 
-/**
- * Hybrid attendee search.
- *
- * - When the LLM is enabled and embeddings exist, we rank by cosine distance
- *   on `attendees.embedding` (pgvector ivfflat) and apply role/skill filters
- *   inside the same SQL query for index-friendly execution.
- * - When embeddings aren't available we fall back to keyword/role/skills
- *   filtering with Prisma — still useful for the agent.
- *
- * The asker is always excluded from results.
- */
 @Injectable()
 export class SearchAttendeesTool {
   constructor(
@@ -62,15 +49,15 @@ export class SearchAttendeesTool {
       try {
         const queryVec = await this.llm.embed(input.query);
 
-        // First pass: honour the LLM's filters.
+
         let rows = await this.semanticQuery(queryVec, ctx, limit, roles, skills);
         if (rows.length > 0) {
           return { mode: 'semantic+keyword', candidates: rows.map(this.toCandidate) };
         }
 
-        // Filters yielded nothing. Common cause: LLM invented a role code or
-        // passed an over-broad skill tag. Re-run semantic-only so we still
-        // surface the closest profiles instead of returning empty.
+
+
+
         if (roles || skills) {
           rows = await this.semanticQuery(queryVec, ctx, limit, null, null);
           if (rows.length > 0) {
@@ -85,7 +72,7 @@ export class SearchAttendeesTool {
           }
         }
       } catch {
-        // fall through to keyword path
+
       }
     }
 
@@ -119,7 +106,7 @@ export class SearchAttendeesTool {
     };
   }
 
-  /** Run the pgvector ANN search; pulled out so we can re-execute without filters. */
+
   private async semanticQuery(
     queryVec: number[],
     ctx: { eventId: string; askerAttendeeId: string },

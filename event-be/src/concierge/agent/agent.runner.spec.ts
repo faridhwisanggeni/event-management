@@ -8,17 +8,10 @@ import { DraftIntroTool } from './tools/draft-intro.tool';
 import { ScoreMatchTool } from './tools/score-match.tool';
 import { SearchAttendeesTool } from './tools/search-attendees.tool';
 
-// Minimal Prisma stub: agent runner only calls `role.findMany` to inject
-// valid role codes into the system prompt. Returning [] is enough for tests.
 const prismaStub = {
   role: { findMany: jest.fn().mockResolvedValue([]) },
 } as unknown as PrismaService;
 
-/**
- * Drives the agent through a full search → score → draft → final-text turn
- * by scripting the OpenAI completion responses. Tools are mocked at the
- * class level so we don't touch Prisma or pgvector.
- */
 describe('AgentRunner', () => {
   function makeChoice(content: string | null, toolCalls: unknown[] | null = null) {
     return {
@@ -51,17 +44,17 @@ describe('AgentRunner', () => {
       isEnabled: jest.fn().mockReturnValue(true),
       chat: jest
         .fn()
-        // Turn 1: search
+
         .mockResolvedValueOnce(
           makeChoice(null, [buildToolCall('c1', 'search_attendees', { query: 'ai cofounder' })]),
         )
-        // Turn 2: score top candidate
+
         .mockResolvedValueOnce(
           makeChoice(null, [
             buildToolCall('c2', 'score_match', { candidate_id: 'a1', intent: 'cofounder' }),
           ]),
         )
-        // Turn 3: draft intro
+
         .mockResolvedValueOnce(
           makeChoice(null, [
             buildToolCall('c3', 'draft_intro_message', {
@@ -70,7 +63,7 @@ describe('AgentRunner', () => {
             }),
           ]),
         )
-        // Turn 4: final text
+
         .mockResolvedValueOnce(makeChoice('Top match: Sarah (92%).')),
     } as unknown as LlmService;
 
@@ -127,7 +120,7 @@ describe('AgentRunner', () => {
         candidate: expect.objectContaining({ id: 'a1' }),
       }),
     ]);
-    // Persisted message log: 3 assistant-with-tool + 3 tool-result + 1 final assistant.
+
     expect(result.newMessages).toHaveLength(7);
   });
 

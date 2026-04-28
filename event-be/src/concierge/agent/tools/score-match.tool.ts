@@ -17,11 +17,6 @@ export interface ScoreMatchResult {
   source: 'fastapi' | 'fallback';
 }
 
-/**
- * Calls the FastAPI `score_match` microservice when SCORE_MATCH_URL is set.
- * Otherwise uses a small LLM-based fallback so the agent flow stays
- * functional in dev/test (and the e2e test we'll add later can mock the LLM).
- */
 @Injectable()
 export class ScoreMatchTool {
   private readonly logger = new Logger(ScoreMatchTool.name);
@@ -79,7 +74,7 @@ export class ScoreMatchTool {
     candidate: NonNullable<Awaited<ReturnType<PrismaService['attendee']['findUnique']>>>,
   ): Promise<ScoreMatchResult> {
     if (!this.llm.isEnabled()) {
-      // Static stub for dev without an API key.
+
       const overlap = (asker?.skills ?? []).filter((s) => candidate.skills.includes(s));
       return {
         candidate_id: candidate.id,

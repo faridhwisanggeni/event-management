@@ -1,10 +1,3 @@
-"""FastAPI application exposing a single deterministic scoring endpoint.
-
-The service is intentionally tiny — one route, one pure function. This makes
-it easy to swap the scorer (e.g. for a cross-encoder) without touching either
-the API contract or the NestJS agent.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -15,8 +8,6 @@ from fastapi import FastAPI
 from .schemas import ScoreRequest, ScoreResponse
 from .scoring import score_match
 
-# Structured-ish logging; matches the lightweight conventions of the NestJS
-# side so log aggregation is uniform.
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
@@ -33,12 +24,9 @@ app = FastAPI(
     ),
 )
 
-
 @app.get("/healthz")
 def healthz() -> dict:
-    """Liveness probe used by docker-compose `depends_on: condition`."""
     return {"status": "ok"}
-
 
 @app.post("/score", response_model=ScoreResponse)
 def score(req: ScoreRequest) -> ScoreResponse:

@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Active roles, ordered for UI dropdowns. */
+
   list(): Promise<Role[]> {
     return this.prisma.role.findMany({
       where: { isActive: true },

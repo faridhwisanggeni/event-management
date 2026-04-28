@@ -39,7 +39,7 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   matches?: ConciergeMatch[] | null;
-  /** Last submitted rating, if any. 5 = thumbs up, 1 = thumbs down. */
+
   rating?: 1 | 5;
 }
 
@@ -56,28 +56,28 @@ export default function ConciergePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch event + attendees for context.
+
   const eventQuery = useQuery({
     queryKey: ['event', eventId],
     queryFn: () => eventsApi.get(eventId),
     enabled: !!eventId,
   });
 
-  // Pull a generous page so the picker shows everyone for small events.
+
   const attendeesQuery = useQuery({
     queryKey: ['attendees', eventId, { page: 1, pageSize: 100 }],
     queryFn: () => attendeesApi.list(eventId, { page: 1, pageSize: 100 }),
     enabled: !!eventId,
   });
 
-  // Reset chat when the asker changes — each attendee gets a fresh thread
-  // (the backend already separates sessions by (event, attendee), so this
-  // just keeps the UI honest about whose perspective we're showing).
+
+
+
   useEffect(() => {
     setMessages([]);
   }, [askerId]);
 
-  // Always scroll to the bottom when messages arrive.
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
@@ -111,7 +111,7 @@ export default function ConciergePage() {
     },
     onError: (err: Error) => {
       toast.error(err.message);
-      // Roll back the optimistic user message so the input isn't lost.
+
       setMessages((prev) => prev.slice(0, -1));
     },
   });
@@ -162,7 +162,7 @@ export default function ConciergePage() {
         </Button>
       </div>
 
-      {/* Asker picker — required so the agent knows whose perspective to take. */}
+      {}
       <Card>
         <CardContent className="flex flex-col gap-2 py-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
@@ -195,7 +195,7 @@ export default function ConciergePage() {
         </CardContent>
       </Card>
 
-      {/* Chat panel */}
+      {}
       <Card className="flex h-[60vh] flex-col">
         <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 && (
@@ -233,7 +233,7 @@ export default function ConciergePage() {
           )}
         </div>
 
-        {/* Composer */}
+        {}
         <div className="border-t p-3">
           <form
             className="flex items-end gap-2"

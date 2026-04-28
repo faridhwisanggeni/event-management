@@ -4,15 +4,6 @@ import { Attendee, Role } from '@prisma/client';
 import { LlmService } from '../llm/llm.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-/**
- * Builds and persists pgvector embeddings for attendees.
- *
- * - Embeds a concatenated profile string (name/headline/bio/role/skills/looking_for).
- * - Writes to the `embedding` column via raw SQL (Prisma can't bind `vector`).
- * - Failures are logged, NEVER thrown — embedding generation is best-effort
- *   and must not break attendee creation. The agent search tool degrades to
- *   keyword-only when an embedding is missing.
- */
 @Injectable()
 export class AttendeeEmbeddingService {
   private readonly logger = new Logger(AttendeeEmbeddingService.name);
@@ -65,14 +56,8 @@ export class AttendeeEmbeddingService {
     }
   }
 
-  /**
-   * Re-embed every attendee in an event whose `embedding` column is NULL.
-   * Useful after the first boot where `OPENAI_API_KEY` was absent, so the
-   * fire-and-forget generation at create-time silently skipped.
-   *
-   * Runs sequentially to avoid spiking OpenAI rate limits on larger events.
-   * Returns counts for the caller to surface.
-   */
+
+
   async backfillMissing(eventId: string): Promise<{ attempted: number; updated: number }> {
     if (!this.llm.isEnabled()) {
       throw new Error('LLM is not configured — set OPENAI_API_KEY to backfill embeddings.');

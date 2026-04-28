@@ -37,11 +37,8 @@ export class AttendeesController {
     return this.attendees.list(eventId, query);
   }
 
-  /**
-   * Dev/ops helper: re-embed every attendee whose vector is NULL. Safe to
-   * call repeatedly. Handy after adding OPENAI_API_KEY to an already-running
-   * instance.
-   */
+
+
   @Post('backfill-embeddings')
   @HttpCode(HttpStatus.OK)
   backfillEmbeddings(

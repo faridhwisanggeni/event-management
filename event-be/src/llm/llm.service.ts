@@ -21,15 +21,6 @@ export interface ChatCallResult {
   completionTokens: number;
 }
 
-/**
- * Thin wrapper around the OpenAI SDK.
- *
- * - Lazily constructs the client so the app can boot without an API key
- *   (concierge will fall back to a stub response in that case).
- * - Logs a single structured line per call with model, latency, tokens,
- *   and any tool names the model invoked. This is what we'd ship as the
- *   "metric/trace per LLM call" requirement (3.1 Observability).
- */
 @Injectable()
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
