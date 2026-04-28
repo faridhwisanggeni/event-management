@@ -2,10 +2,17 @@ import { Test } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 
 import { LlmService } from '../../llm/llm.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { AgentRunner } from './agent.runner';
 import { DraftIntroTool } from './tools/draft-intro.tool';
 import { ScoreMatchTool } from './tools/score-match.tool';
 import { SearchAttendeesTool } from './tools/search-attendees.tool';
+
+// Minimal Prisma stub: agent runner only calls `role.findMany` to inject
+// valid role codes into the system prompt. Returning [] is enough for tests.
+const prismaStub = {
+  role: { findMany: jest.fn().mockResolvedValue([]) },
+} as unknown as PrismaService;
 
 /**
  * Drives the agent through a full search → score → draft → final-text turn
@@ -93,6 +100,7 @@ describe('AgentRunner', () => {
         AgentRunner,
         { provide: ConfigService, useValue: { get: () => '6' } },
         { provide: LlmService, useValue: llm },
+        { provide: PrismaService, useValue: prismaStub },
         { provide: SearchAttendeesTool, useValue: search },
         { provide: ScoreMatchTool, useValue: score },
         { provide: DraftIntroTool, useValue: draft },
@@ -140,6 +148,7 @@ describe('AgentRunner', () => {
         AgentRunner,
         { provide: ConfigService, useValue: { get: () => '2' } },
         { provide: LlmService, useValue: llm },
+        { provide: PrismaService, useValue: prismaStub },
         { provide: SearchAttendeesTool, useValue: search },
         { provide: ScoreMatchTool, useValue: { run: jest.fn() } },
         { provide: DraftIntroTool, useValue: { run: jest.fn() } },

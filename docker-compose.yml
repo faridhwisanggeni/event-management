@@ -23,9 +23,6 @@ services:
       dockerfile: Dockerfile
     container_name: eventmgmt-api
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -40,9 +37,33 @@ services:
       OPENAI_EMBEDDING_DIMS: ${OPENAI_EMBEDDING_DIMS:-1536}
       CONCIERGE_MAX_TOOL_ITERATIONS: 6
       CONCIERGE_LLM_TIMEOUT_MS: 30000
-      SCORE_MATCH_URL: ${SCORE_MATCH_URL:-}
+      # Default to the in-network FastAPI service. Override via root .env
+      # to point at a remote scorer or leave blank to force LLM fallback.
+      SCORE_MATCH_URL: ${SCORE_MATCH_URL:-http://score-match:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      score-match:
+        condition: service_healthy
     ports:
       - "3001:3001"
+
+  score-match:
+    build:
+      context: ./score-match
+      dockerfile: Dockerfile
+    container_name: eventmgmt-score-match
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      # Expose for local curl/debugging; remove if you want it network-only.
+      - "8000:8000"
 
   web:
     build:

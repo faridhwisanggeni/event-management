@@ -24,7 +24,12 @@ export interface SearchAttendeesCandidate {
 
 export interface SearchAttendeesResult {
   candidates: SearchAttendeesCandidate[];
-  mode: 'semantic+keyword' | 'keyword-only';
+  mode: 'semantic+keyword' | 'semantic-only' | 'keyword-only';
+  /**
+   * If we ignored the LLM-supplied filters because they yielded zero results,
+   * we record what was dropped so the agent can avoid repeating itself.
+   */
+  filtersDropped?: { roles?: boolean; skills?: boolean };
 }
 
 /**
@@ -56,49 +61,28 @@ export class SearchAttendeesTool {
     if (this.llm.isEnabled()) {
       try {
         const queryVec = await this.llm.embed(input.query);
-        const literal = `[${queryVec.join(',')}]`;
 
-        const rows = await this.prisma.$queryRaw<
-          Array<{
-            id: string;
-            name: string;
-            headline: string | null;
-            company: string | null;
-            role_code: string | null;
-            skills: string[];
-            looking_for: string | null;
-            distance: number;
-          }>
-        >(Prisma.sql`
-          SELECT a.id, a.name, a.headline, a.company,
-                 r.code AS role_code, a.skills, a.looking_for,
-                 (a.embedding <=> ${literal}::vector) AS distance
-          FROM attendees a
-          LEFT JOIN attendee_roles r ON r.id = a.role_id
-          WHERE a.event_id = ${ctx.eventId}::uuid
-            AND a.id <> ${ctx.askerAttendeeId}::uuid
-            AND a.open_to_chat = TRUE
-            AND a.embedding IS NOT NULL
-            ${roles ? Prisma.sql`AND r.code = ANY(${roles})` : Prisma.empty}
-            ${skills ? Prisma.sql`AND a.skills && ${skills}` : Prisma.empty}
-          ORDER BY a.embedding <=> ${literal}::vector ASC
-          LIMIT ${limit}
-        `);
-
+        // First pass: honour the LLM's filters.
+        let rows = await this.semanticQuery(queryVec, ctx, limit, roles, skills);
         if (rows.length > 0) {
-          return {
-            mode: 'semantic+keyword',
-            candidates: rows.map((r) => ({
-              id: r.id,
-              name: r.name,
-              headline: r.headline,
-              company: r.company,
-              role: r.role_code,
-              skills: r.skills,
-              lookingFor: r.looking_for,
-              similarity: 1 - Number(r.distance),
-            })),
-          };
+          return { mode: 'semantic+keyword', candidates: rows.map(this.toCandidate) };
+        }
+
+        // Filters yielded nothing. Common cause: LLM invented a role code or
+        // passed an over-broad skill tag. Re-run semantic-only so we still
+        // surface the closest profiles instead of returning empty.
+        if (roles || skills) {
+          rows = await this.semanticQuery(queryVec, ctx, limit, null, null);
+          if (rows.length > 0) {
+            return {
+              mode: 'semantic-only',
+              candidates: rows.map(this.toCandidate),
+              filtersDropped: {
+                roles: !!roles,
+                skills: !!skills,
+              },
+            };
+          }
         }
       } catch {
         // fall through to keyword path
@@ -134,4 +118,61 @@ export class SearchAttendeesTool {
       })),
     };
   }
+
+  /** Run the pgvector ANN search; pulled out so we can re-execute without filters. */
+  private async semanticQuery(
+    queryVec: number[],
+    ctx: { eventId: string; askerAttendeeId: string },
+    limit: number,
+    roles: string[] | null,
+    skills: string[] | null,
+  ) {
+    const literal = `[${queryVec.join(',')}]`;
+    return this.prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+        headline: string | null;
+        company: string | null;
+        role_code: string | null;
+        skills: string[];
+        looking_for: string | null;
+        distance: number;
+      }>
+    >(Prisma.sql`
+      SELECT a.id, a.name, a.headline, a.company,
+             r.code AS role_code, a.skills, a.looking_for,
+             (a.embedding <=> ${literal}::vector) AS distance
+      FROM attendees a
+      LEFT JOIN attendee_roles r ON r.id = a.role_id
+      WHERE a.event_id = ${ctx.eventId}::uuid
+        AND a.id <> ${ctx.askerAttendeeId}::uuid
+        AND a.open_to_chat = TRUE
+        AND a.embedding IS NOT NULL
+        ${roles ? Prisma.sql`AND r.code = ANY(${roles})` : Prisma.empty}
+        ${skills ? Prisma.sql`AND a.skills && ${skills}` : Prisma.empty}
+      ORDER BY a.embedding <=> ${literal}::vector ASC
+      LIMIT ${limit}
+    `);
+  }
+
+  private toCandidate = (r: {
+    id: string;
+    name: string;
+    headline: string | null;
+    company: string | null;
+    role_code: string | null;
+    skills: string[];
+    looking_for: string | null;
+    distance: number;
+  }): SearchAttendeesCandidate => ({
+    id: r.id,
+    name: r.name,
+    headline: r.headline,
+    company: r.company,
+    role: r.role_code,
+    skills: r.skills,
+    lookingFor: r.looking_for,
+    similarity: 1 - Number(r.distance),
+  });
 }
