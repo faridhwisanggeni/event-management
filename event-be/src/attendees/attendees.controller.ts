@@ -37,8 +37,6 @@ export class AttendeesController {
     return this.attendees.list(eventId, query);
   }
 
-
-
   @Post('backfill-embeddings')
   @HttpCode(HttpStatus.OK)
   backfillEmbeddings(

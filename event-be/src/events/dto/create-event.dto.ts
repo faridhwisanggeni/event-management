@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsDate, IsNotEmpty, IsString, MaxLength, MinLength, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import {
+  IsDate,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+} from 'class-validator';
 
 @ValidatorConstraint({ name: 'IsAfter', async: false })
 class IsAfterConstraint implements ValidatorConstraintInterface {

@@ -26,7 +26,6 @@ export interface SearchAttendeesResult {
   candidates: SearchAttendeesCandidate[];
   mode: 'semantic+keyword' | 'semantic-only' | 'keyword-only';
 
-
   filtersDropped?: { roles?: boolean; skills?: boolean };
 }
 
@@ -49,14 +48,10 @@ export class SearchAttendeesTool {
       try {
         const queryVec = await this.llm.embed(input.query);
 
-
         let rows = await this.semanticQuery(queryVec, ctx, limit, roles, skills);
         if (rows.length > 0) {
           return { mode: 'semantic+keyword', candidates: rows.map(this.toCandidate) };
         }
-
-
-
 
         if (roles || skills) {
           rows = await this.semanticQuery(queryVec, ctx, limit, null, null);
@@ -71,9 +66,7 @@ export class SearchAttendeesTool {
             };
           }
         }
-      } catch {
-
-      }
+      } catch {}
     }
 
     const where: Prisma.AttendeeWhereInput = {
@@ -105,7 +98,6 @@ export class SearchAttendeesTool {
       })),
     };
   }
-
 
   private async semanticQuery(
     queryVec: number[],

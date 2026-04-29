@@ -127,9 +127,11 @@ describe('AgentRunner', () => {
   it('returns a budget-exceeded reply when max iterations is reached', async () => {
     const llm = {
       isEnabled: jest.fn().mockReturnValue(true),
-      chat: jest.fn().mockResolvedValue(
-        makeChoice(null, [buildToolCall('c', 'search_attendees', { query: 'x' })]),
-      ),
+      chat: jest
+        .fn()
+        .mockResolvedValue(
+          makeChoice(null, [buildToolCall('c', 'search_attendees', { query: 'x' })]),
+        ),
     } as unknown as LlmService;
 
     const search = {

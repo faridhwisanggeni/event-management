@@ -17,8 +17,6 @@ export class ConciergeController {
     return this.concierge.postMessage(eventId, dto.attendee_id, dto.message);
   }
 
-
-
   @Post('messages/:messageId/feedback')
   @HttpCode(200)
   async postFeedback(

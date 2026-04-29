@@ -7,7 +7,6 @@ import { PrismaService } from '../prisma/prisma.service';
 export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
-
   list(): Promise<Role[]> {
     return this.prisma.role.findMany({
       where: { isActive: true },

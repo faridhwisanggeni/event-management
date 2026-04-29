@@ -27,10 +27,7 @@ export class ScoreMatchTool {
     private readonly llm: LlmService,
   ) {}
 
-  async run(
-    input: ScoreMatchInput,
-    ctx: { askerAttendeeId: string },
-  ): Promise<ScoreMatchResult> {
+  async run(input: ScoreMatchInput, ctx: { askerAttendeeId: string }): Promise<ScoreMatchResult> {
     const [asker, candidate] = await Promise.all([
       this.prisma.attendee.findUnique({ where: { id: ctx.askerAttendeeId } }),
       this.prisma.attendee.findUnique({ where: { id: input.candidate_id } }),
@@ -74,7 +71,6 @@ export class ScoreMatchTool {
     candidate: NonNullable<Awaited<ReturnType<PrismaService['attendee']['findUnique']>>>,
   ): Promise<ScoreMatchResult> {
     if (!this.llm.isEnabled()) {
-
       const overlap = (asker?.skills ?? []).filter((s) => candidate.skills.includes(s));
       return {
         candidate_id: candidate.id,

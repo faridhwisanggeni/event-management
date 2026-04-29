@@ -77,7 +77,4 @@ export const CONCIERGE_TOOLS: ChatCompletionTool[] = [
   },
 ];
 
-export type ConciergeToolName =
-  | 'search_attendees'
-  | 'score_match'
-  | 'draft_intro_message';
+export type ConciergeToolName = 'search_attendees' | 'score_match' | 'draft_intro_message';

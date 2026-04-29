@@ -52,11 +52,13 @@ export class AttendeeEmbeddingService {
       );
       this.logger.log({ msg: 'attendee.embedding.updated', attendeeId });
     } catch (err) {
-      this.logger.warn({ msg: 'attendee.embedding.failed', attendeeId, err: (err as Error).message });
+      this.logger.warn({
+        msg: 'attendee.embedding.failed',
+        attendeeId,
+        err: (err as Error).message,
+      });
     }
   }
-
-
 
   async backfillMissing(eventId: string): Promise<{ attempted: number; updated: number }> {
     if (!this.llm.isEnabled()) {

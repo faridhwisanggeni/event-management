@@ -11,12 +11,6 @@ import { ConciergeService } from './concierge.service';
 @Module({
   imports: [LlmModule],
   controllers: [ConciergeController],
-  providers: [
-    ConciergeService,
-    AgentRunner,
-    SearchAttendeesTool,
-    ScoreMatchTool,
-    DraftIntroTool,
-  ],
+  providers: [ConciergeService, AgentRunner, SearchAttendeesTool, ScoreMatchTool, DraftIntroTool],
 })
 export class ConciergeModule {}

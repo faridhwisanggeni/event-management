@@ -40,7 +40,6 @@ export class ConciergeService {
       update: {},
     });
 
-
     await this.prisma.conciergeMessage.create({
       data: {
         sessionId: session.id,
@@ -73,13 +72,11 @@ export class ConciergeService {
       askerAttendeeId: attendeeId,
     });
 
-
     let finalMessage: ConciergeMessage | null = null;
     await this.prisma.$transaction(async (tx) => {
       for (let i = 0; i < turn.newMessages.length; i++) {
         const m = turn.newMessages[i];
-        const isFinalAssistant =
-          m.role === 'ASSISTANT' && i === turn.newMessages.length - 1;
+        const isFinalAssistant = m.role === 'ASSISTANT' && i === turn.newMessages.length - 1;
 
         if (m.role === 'ASSISTANT') {
           const created = await tx.conciergeMessage.create({
@@ -91,9 +88,7 @@ export class ConciergeService {
               promptTokens: m.promptTokens,
               completionTokens: m.completionTokens,
               latencyMs: m.latencyMs,
-              matches: isFinalAssistant
-                ? (turn.matches as Prisma.InputJsonValue)
-                : Prisma.JsonNull,
+              matches: isFinalAssistant ? (turn.matches as Prisma.InputJsonValue) : Prisma.JsonNull,
             },
           });
           if (isFinalAssistant) finalMessage = created;
@@ -123,8 +118,6 @@ export class ConciergeService {
     };
   }
 
-
-
   async upsertFeedback(
     eventId: string,
     messageId: string,
@@ -148,7 +141,6 @@ export class ConciergeService {
       update: { rating, notes: notes ?? null },
     });
   }
-
 
   private async loadHistory(sessionId: string): Promise<ChatCompletionMessageParam[]> {
     const rows = await this.prisma.conciergeMessage.findMany({
@@ -179,7 +171,6 @@ export class ConciergeService {
           }
           break;
         case ConciergeRole.SYSTEM:
-
           break;
       }
     }

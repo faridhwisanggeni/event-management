@@ -20,10 +20,7 @@ export class DraftIntroTool {
     private readonly llm: LlmService,
   ) {}
 
-  async run(
-    input: DraftIntroInput,
-    ctx: { askerAttendeeId: string },
-  ): Promise<DraftIntroResult> {
+  async run(input: DraftIntroInput, ctx: { askerAttendeeId: string }): Promise<DraftIntroResult> {
     const [asker, candidate] = await Promise.all([
       this.prisma.attendee.findUnique({ where: { id: ctx.askerAttendeeId } }),
       this.prisma.attendee.findUnique({ where: { id: input.candidate_id } }),

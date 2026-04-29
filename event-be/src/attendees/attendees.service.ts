@@ -33,7 +33,6 @@ export class AttendeesService {
       },
     });
 
-
     void this.embeddings.upsertForAttendee(attendee.id);
 
     return attendee;

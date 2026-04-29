@@ -26,7 +26,6 @@ export interface PersistedToolCall {
 }
 
 export interface AgentTurnResult {
-
   newMessages: Array<
     | {
         role: 'ASSISTANT';
@@ -50,11 +49,7 @@ export interface AgentTurnResult {
 }
 
 function buildSystemPrompt(roleCodes: string[]): string {
-
-
-  const roleList = roleCodes.length
-    ? roleCodes.join(', ')
-    : '(none configured)';
+  const roleList = roleCodes.length ? roleCodes.join(', ') : '(none configured)';
   return `You are our company's AI Networking Concierge for a single event.
 You help the attendee find the most relevant other attendees to talk to.
 
@@ -106,8 +101,6 @@ export class AgentRunner {
     userMessage: string,
     ctx: AgentTurnContext,
   ): Promise<AgentTurnResult> {
-
-
     const roleRows = await this.prisma.role.findMany({
       where: { isActive: true },
       select: { code: true },
@@ -142,7 +135,6 @@ export class AgentRunner {
         completionTokens,
         latencyMs,
       });
-
 
       messages.push({
         role: 'assistant',
@@ -220,8 +212,6 @@ export class AgentRunner {
       return { error: 'tool_execution_failed', tool: tc.function.name };
     }
   }
-
-
 
   private buildMatches(toolResultsByName: Record<string, unknown[]>): unknown {
     const searches = (toolResultsByName.search_attendees ?? []) as Array<{

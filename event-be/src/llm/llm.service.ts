@@ -66,15 +66,14 @@ export class LlmService {
       model: this.chatModel,
       messages: options.messages,
       tools: options.tools,
-      tool_choice: options.tools ? options.toolChoice ?? 'auto' : undefined,
+      tool_choice: options.tools ? (options.toolChoice ?? 'auto') : undefined,
       temperature: options.temperature ?? 0.2,
     });
     const latencyMs = Date.now() - start;
 
     const promptTokens = completion.usage?.prompt_tokens ?? 0;
     const completionTokens = completion.usage?.completion_tokens ?? 0;
-    const toolNames =
-      completion.choices[0]?.message?.tool_calls?.map((c) => c.function.name) ?? [];
+    const toolNames = completion.choices[0]?.message?.tool_calls?.map((c) => c.function.name) ?? [];
 
     this.logger.log({
       msg: 'llm.chat',
