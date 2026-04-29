@@ -1,6 +1,6 @@
 # score_match
 
-Stateless scoring microservice used by the **MyConnect concierge agent** in
+Stateless scoring microservice used by the **Concierge agent** in
 NestJS. Given an *asker*, a *candidate*, and the asker's *intent*, returns a
 `0–100` match score plus a human-readable rationale and the explicit list of
 shared ground.

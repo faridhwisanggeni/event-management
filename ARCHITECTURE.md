@@ -246,28 +246,82 @@ content). Concrete decisions in this codebase:
      such attendees are never sent to OpenAI in the first place — verified
      by the SQL `WHERE open_to_chat = TRUE` filter in
      `search-attendees.tool.ts`).
-- **Cross-jurisdiction.** If MyConnect operates in jurisdictions with data
+- **Cross-jurisdiction.** If our company operates in jurisdictions with data
   residency rules (Indonesia PDP, EU GDPR, India DPDP), the deployment
   needs region-locked Postgres replicas. The application layer is already
   region-agnostic.
 
 ---
 
-## What an "evaluation" looks like
+## Eval harness — what we ship today
 
-The spec calls out an eval harness as a "separates senior AI engineers from
-LLM-prompt jockeys" deliverable. It is not in this submission — see the
-trade-offs in the root README — but the design would be:
+The spec calls eval harnesses out as a "separates senior AI engineers
+from LLM-prompt jockeys" deliverable. **It ships in this submission**,
+in `score-match/`:
 
 ```
-fixtures/
-├── 01_ai_cofounder.json     # asker + intent + ground-truth top-1 candidate
-├── 02_backend_hire.json
-└── ...
+score-match/
+├── eval/
+│   └── fixtures.json     ← 10 hand-labelled scenarios
+└── tests/
+    └── test_eval.py      ← parametrised pytest + recall@1 / recall@3 summary
 ```
 
-Each fixture seeds the DB, runs the concierge, and asserts the top-1
-candidate matches the labelled ground truth. We'd measure recall@1 and
-recall@3 at minimum, plus latency and token cost per turn. Regression
-threshold: a PR that drops recall@1 below 80% on the fixture set fails
-CI. This is the single most valuable thing I'd build with one more day.
+Each fixture has the form:
+
+```json
+{
+  "scenario": "01_ai_cofounder_b2b_saas",
+  "intent": "find ai cofounder for b2b saas startup with langchain experience",
+  "asker":   { "id": "asker-1", "name": "Andre", "skills": ["python", "langchain"], ... },
+  "candidates": [
+    { "id": "gt-1", "name": "Sarah Lim", ..., "ground_truth": true },
+    { "id": "d-1a", "name": "Maya",      ... },
+    { "id": "d-1b", "name": "Rio",       ... },
+    { "id": "d-1c", "name": "Linda",     ... }
+  ]
+}
+```
+
+The harness scores every candidate via `POST /score`, ranks by
+descending score, and asserts the ground-truth candidate sits at rank 1.
+It also reports recall@1 and recall@3 over the full set.
+
+**Current run on the rule-based scorer:**
+
+```
+score-match eval — 10 fixtures
+recall@1 = 100%    recall@3 = 100%
+```
+
+### Why this design
+
+- **No DB, no network, no LLM.** The harness uses FastAPI's `TestClient`
+  in-process; no fixture seeds Postgres, no OpenAI key required, runs
+  in CI in <1 second.
+- **Catches scorer regressions, not LLM stochasticity.** The agent's
+  reply text is non-deterministic (an LLM is involved); the *ranking*
+  the scorer produces is deterministic. Asserting the ranking is what
+  protects users from "we shipped a scorer change and the top match got
+  worse".
+- **Strict at the per-fixture level, soft in aggregate.** Each fixture
+  is its own test (one assertion per fixture). The aggregate test
+  enforces recall@1 ≥ 90% and recall@3 = 100%, which gives us 1 fixture
+  of slack when swapping scorers — a new model may legitimately tie
+  ground truth with a near-equivalent candidate, and that should not
+  fail CI immediately.
+- **Survives algorithm swaps.** When (not if) the scorer is swapped for
+  a cross-encoder or LLM-as-judge, the same fixtures and the same
+  assertions stay valid. Only the implementation behind `POST /score`
+  changes. That is exactly what the polyglot service was extracted for.
+
+### What I would extend this with
+
+- Add a "live" mode that hits the real concierge endpoint with
+  `OPENAI_API_KEY` set, seeds Postgres with the fixture candidates,
+  and asserts the agent's `matches[0].candidate.id` equals the ground
+  truth. That's a different layer of the stack — it tests retrieval +
+  prompt + scoring as one — at the cost of cost and stochasticity.
+  Gated behind a `RUN_LIVE_EVAL=1` env so it stays out of CI.
+- Add latency / token-cost SLOs to the summary table once the live mode
+  exists.

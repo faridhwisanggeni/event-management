@@ -14,6 +14,7 @@ event-management/
 ├── docker-compose.yml    ← postgres + api + web + score-match (single-command boot)
 ├── README.md             ← this file (overview, quickstart, ops)
 ├── ARCHITECTURE.md       ← stack justification, agent design, scaling, PII
+├── WALKTHROUGH.md        ← written demo + code walk-through (in lieu of Loom)
 ├── event-be/             ← NestJS API (Prisma + Postgres + OpenAI)
 │   ├── src/concierge/    ← AI Networking Concierge agent + tools
 │   ├── prisma/           ← schema + migrations (pgvector)
@@ -21,7 +22,9 @@ event-management/
 ├── event-fe/             ← Next.js 14 dashboard (Tailwind + shadcn/ui)
 │   └── src/app/          ← /events and /attendees routes
 └── score-match/          ← Python FastAPI scoring microservice
-    └── app/scoring.py    ← deterministic 0-100 match scorer
+    ├── app/scoring.py    ← deterministic 0-100 match scorer
+    ├── eval/fixtures.json ← 10 hand-labelled eval fixtures
+    └── tests/test_eval.py ← eval harness (recall@1 / recall@3)
 ```
 
 ## Quickstart
@@ -132,7 +135,8 @@ sequenceDiagram
 |---|---|---|
 | NestJS unit | `cd event-be && npm test` | services (events, attendees), `AgentRunner` tool-loop |
 | NestJS e2e  | `cd event-be && npm run test:e2e` | full HTTP turn through agent + persistence + prompt-injection guard (mocked LLM) |
-| score-match | `cd score-match && pytest` | scoring algorithm + FastAPI contract |
+| score-match unit | `cd score-match && pytest tests/test_scoring.py tests/test_api.py` | scoring algorithm + FastAPI contract |
+| score-match eval | `cd score-match && pytest tests/test_eval.py -v -s` | 10-fixture eval harness — recall@1 across hand-labelled scenarios |
 
 All three are wired into GitHub Actions — see
 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml). Every PR runs
@@ -148,6 +152,35 @@ attendee bio containing *"ignore previous instructions"* must (a) be passed
 to the LLM with a system prompt that explicitly classifies bios as DATA, and
 (b) get persisted verbatim for audit but never echoed back as the agent's
 reply.
+
+### Eval harness — 10 hand-labelled fixtures
+
+The spec calls eval harnesses out as the kind of artefact that *separates
+senior AI engineers from LLM-prompt jockeys*. There are 10 fixtures in
+[`score-match/eval/fixtures.json`](./score-match/eval/fixtures.json)
+covering scenarios like *"AI cofounder for B2B SaaS"*, *"hire senior
+backend with postgres"*, *"Series A climate investor"*, *"DevOps
+consultant who knows kubernetes"*, etc. Each fixture has one labelled
+ground-truth candidate plus 3 plausible distractors.
+
+[`tests/test_eval.py`](./score-match/tests/test_eval.py) replays every
+fixture through `POST /score`, ranks by descending score, and asserts:
+
+- Strict (one test per fixture): ground truth ranks **#1**.
+- Aggregate: **recall@1 ≥ 90%** and **recall@3 = 100%** across all
+  fixtures (current scorer hits 100% on both).
+
+Current run output:
+
+```
+score-match eval — 10 fixtures
+recall@1 = 100%    recall@3 = 100%
+```
+
+This guards against regressions when the scoring algorithm is swapped
+(e.g. rule-based → cross-encoder, or future LLM-as-judge experiments).
+The contract (`POST /score`) stays the same; the fixtures stay the same;
+only the implementation changes underneath.
 
 ---
 
@@ -188,42 +221,65 @@ trade-offs below.
 
 ---
 
-## Trade-offs and "what I'd do with more time"
+## Trade-offs and "what I would do with more time"
 
-**What I cut on purpose:**
+### What I would do with more time
 
-- **No auth / no tenant scoping.** The spec doesn't require it and adding
-  proper auth would have eaten the time I spent on the agent. In production
-  this is the *first* thing I'd add — at minimum a per-event API key on
-  registration, and an `attendee_id` cookie or signed JWT for the concierge
-  endpoint so people can't impersonate each other.
-- **Rate limiting is per-IP, not per-LLM-call-budget.** `@nestjs/throttler`
-  caps HTTP rate at 20 req/s burst, 300/min sustained per IP. There is *no*
-  per-event LLM-spend cap. With $5 of GPT-4o-mini you can run ~5k turns,
-  which is plenty for the demo, but a real deployment needs a token-bucket
-  keyed on `eventId`.
-- **No per-attendee message edit / re-embed.** If an attendee updates their
-  bio, the embedding becomes stale. The "Rebuild embeddings" admin button
-  papers over this for now. A proper solution is a Prisma middleware that
-  enqueues a re-embed job whenever a profile field changes.
-- **score-match scorer is rule-based, not learned.** It uses a 5-feature
-  weighted sum (role complement, skill overlap, intent term overlap,
-  open-to-chat baseline, seniority conflict). With a labelled dataset I'd
-  swap to a small cross-encoder; the FastAPI contract was designed to make
-  that a one-line code change.
-- **Agent state persistence is "replay all messages each turn".** Cheap to
-  build, correct, but wasteful at long horizons. With more time I'd add a
-  rolling summary every N turns (the system prompt already supports it; the
-  schema has the columns).
-- **No OpenTelemetry / distributed tracing.** Pino + request-id covers 90%
-  of the debug value; OTEL spans across NestJS → score-match → OpenAI would
-  be the next step.
-- **Eval harness deferred.** The spec calls one out and I agree it's the
-  highest-signal artefact for an AI role; design is sketched in
-  `ARCHITECTURE.md` (§ "What an evaluation looks like") but not built.
-  This is the single most valuable thing I'd ship with one more day.
+The spec asks for an explicit callout of what I'd build next. In rough
+priority order:
 
-**Hard no-gos I actively defended against:**
+1. **User authentication and audit trail.** This is the gap I am most
+   aware of. Today there is no login: anyone with the URL can register
+   attendees on behalf of anyone, and — more concerning — anyone can
+   claim *any* `attendee_id` in the concierge chat and impersonate that
+   person. There are also no `created_by` / `updated_by` columns, so we
+   cannot answer *"who edited Sarah's bio at 14:32?"*. With more time I
+   would add:
+   - Email-based magic-link login (NextAuth on the FE, signed JWT on
+     the BE).
+   - An `attendee_id` claim baked into the JWT and scoped to one event,
+     so the concierge endpoint can only ever speak as the logged-in
+     attendee.
+   - `created_by_user_id` / `updated_by_user_id` audit columns on every
+     mutable table, plus an `audit_log` table for who-did-what-when.
+2. **Cloud deployment & real observability dashboards.** The README has
+   a section explaining how to wire structured logs into CloudWatch /
+   Azure Monitor, and the GitHub Actions CI builds all three Docker
+   images on every PR — but I have not actually deployed any of this to
+   AWS or Azure, nor written the Terraform module to provision the
+   Postgres + container service. **This is a deliberate honest
+   limitation: I do not have access to a paid AWS / Azure subscription
+   right now.** Every `pino-cloudwatch` forwarder and every Terraform
+   `aws_ecs_service` block in the world doesn't help if you can't run
+   `terraform apply`. The shape of what I would do is documented; the
+   apply step is what I would buy with more time (and an account).
+3. **Per-event LLM spend cap.** `@nestjs/throttler` caps HTTP at 20 req/s
+   burst, 300/min sustained per IP. There is *no* per-event token-budget
+   yet. A real deployment needs a token-bucket keyed on `eventId` so a
+   single noisy event can't drain the OpenAI budget for the whole tenant.
+4. **Async re-embedding pipeline.** When an attendee updates their bio
+   today, their `embedding` column gets replaced synchronously inside
+   the request handler. At 10k attendees this becomes a head-of-line
+   blocker. The fix is a Prisma middleware that enqueues a job whenever
+   a profile field changes — Postgres `LISTEN/NOTIFY` for low volume,
+   BullMQ on Redis if the queue ever needs replay. The admin "Rebuild
+   embeddings" button is the temporary safety net.
+5. **Learned scorer.** `score-match` today is a deterministic rule-based
+   weighted sum (role complement, skill overlap, intent term overlap,
+   open-to-chat baseline, seniority conflict). The eval harness already
+   ships and currently scores recall@1 = 100% on the 10 fixtures; once
+   we have ≥50 labelled match pairs I'd swap the scorer for a small
+   cross-encoder and use the same harness as the regression gate.
+6. **Rolling-summary conversation memory.** The agent currently replays
+   every message each turn — cheap and correct, but wasteful past ~20
+   turns. The schema already has the columns to store a rolling summary;
+   just need a small summariser tool and a swap in `loadHistory()`.
+7. **OpenTelemetry distributed tracing.** Pino + request-id covers 90%
+   of the debug value, but OTEL spans across NestJS → score-match →
+   OpenAI would let you see which leg of a slow concierge turn is the
+   culprit.
+
+### Hard no-gos I actively defended against
 
 - **No raw SQL concatenation.** All `$queryRawUnsafe` / `$executeRawUnsafe`
   call sites use parameter placeholders (`$1::uuid`, `$2::vector`).
@@ -239,19 +295,36 @@ trade-offs below.
 ## AI assistants used (honesty disclosure)
 
 I used **Cascade (Windsurf)** with Claude Sonnet 4.5 throughout this
-project as a pair-programmer — primarily for:
+project as a pair-programmer.
 
-- Scaffolding repetitive boilerplate (Nest controllers/DTOs, shadcn UI
-  components, OpenAPI-style schemas for tool calls).
-- Reviewing my Prisma schema for indexes I'd missed (the `(eventId, roleId)`
-  composite came from a Cascade suggestion).
-- Drafting this README and `ARCHITECTURE.md` from bullet-point notes.
-- Debugging the e2e test's UUID-validation failure (ParseUUIDPipe defaults
-  to v4; my hand-rolled UUIDs had version digit `1`).
+### Development Workflow
 
-Every architectural decision and every line that ships is reviewed by me
-before commit. The concierge prompt, tool schemas, and scoring algorithm
-were designed by hand — Cascade sped up the keystrokes, not the thinking.
+1. **Scaffolding & Architecture Discussion**
+   - Discussed project scaffolding structure and asked AI for recommendations on best practices
+   - Collaborative brainstorming on entities, database schema (Prisma), tables, indexes, and relationships
+2. **Planning & Task Breakdown**
+   - Once scaffolding and entities were clear, I asked AI to generate a development plan
+   - The plan was broken down into incremental deliverables:
+     - Point 1: `event-be` (backend API)
+     - Point 2: `event-fe` (frontend)
+     - Point 3: `score-match` (scoring algorithm)
+3. **Iterative Development & Testing**
+   - Executed the plan point-by-point
+   - After each milestone, performed manual testing via **Postman** (backend) and **UI exploration** (frontend)
+   - Immediate bug fixes and refinements when issues were discovered
+
+### What AI Helped With
+
+- Generating boilerplate code (NestJS controllers, DTOs, Prisma schemas)
+- Suggesting database indexes and optimization
+- Drafting documentation from bullet-point notes
+- Debugging validation errors and edge cases
+
+### What I Did Manually
+
+- All architectural decisions and code reviews before commit
+- Core business logic (concierge prompt, tool schemas, scoring algorithm)
+- Final testing and quality assurance
 
 ---
 

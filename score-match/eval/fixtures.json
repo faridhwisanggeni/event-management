@@ -1,0 +1,429 @@
+[
+  {
+    "scenario": "01_ai_cofounder_b2b_saas",
+    "intent": "find ai cofounder for b2b saas startup with langchain experience",
+    "asker": {
+      "id": "asker-1",
+      "name": "Andre",
+      "headline": "Backend engineer in Jakarta",
+      "skills": ["python", "nestjs", "langchain"],
+      "lookingFor": "AI cofounder for B2B SaaS"
+    },
+    "candidates": [
+      {
+        "id": "gt-1",
+        "name": "Sarah Lim",
+        "headline": "AI cofounder building b2b saas finance automation",
+        "bio": "Building langchain-powered automation for B2B finance teams",
+        "role": "FOUNDER",
+        "skills": ["python", "langchain", "pytorch"],
+        "lookingFor": "Backend cofounder for B2B SaaS",
+        "ground_truth": true
+      },
+      {
+        "id": "d-1a",
+        "name": "Maya",
+        "headline": "Marketing lead at consumer fintech app",
+        "bio": "Growth marketing for B2C apps",
+        "role": "MARKETING_LEAD",
+        "skills": ["seo", "growth"]
+      },
+      {
+        "id": "d-1b",
+        "name": "Rio",
+        "headline": "AI engineer at consumer photo app",
+        "bio": "Computer vision for consumer products",
+        "role": "AI_ENGINEER",
+        "skills": ["pytorch", "opencv"]
+      },
+      {
+        "id": "d-1c",
+        "name": "Linda",
+        "headline": "Product designer at mobility startup",
+        "skills": ["figma"],
+        "role": "DESIGNER"
+      }
+    ]
+  },
+  {
+    "scenario": "02_senior_backend_hire",
+    "intent": "hire senior backend engineer with postgres experience",
+    "asker": {
+      "id": "asker-2",
+      "name": "Joko",
+      "headline": "Founder at supply-chain startup",
+      "skills": [],
+      "lookingFor": "Senior backend engineer hire"
+    },
+    "candidates": [
+      {
+        "id": "gt-2",
+        "name": "Putri",
+        "headline": "Senior backend engineer with postgres expertise",
+        "bio": "Eight years building postgres-backed platforms",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["postgres", "nodejs", "typescript"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-2a",
+        "name": "Adi",
+        "headline": "Junior backend engineer eager to learn",
+        "bio": "Recent bootcamp graduate, learning postgres",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["nodejs"]
+      },
+      {
+        "id": "d-2b",
+        "name": "Ina",
+        "headline": "Senior frontend engineer",
+        "bio": "React and accessibility specialist",
+        "role": "FRONTEND_DEVELOPER",
+        "skills": ["react", "typescript"]
+      },
+      {
+        "id": "d-2c",
+        "name": "Rama",
+        "headline": "Data analyst at logistics company",
+        "bio": "SQL and tableau dashboards",
+        "role": "DATA_ANALYST",
+        "skills": ["sql", "tableau"]
+      }
+    ]
+  },
+  {
+    "scenario": "03_series_a_climate_investor",
+    "intent": "find series a investor focused on climate tech",
+    "candidates": [
+      {
+        "id": "gt-3",
+        "name": "Henry Tan",
+        "headline": "Partner at climate-focused vc, leads series a deals",
+        "bio": "Investing series a in climate tech and energy transition",
+        "role": "INVESTOR",
+        "skills": ["due-diligence", "term-sheets"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-3a",
+        "name": "Wira",
+        "headline": "Angel investor in early-stage consumer apps",
+        "bio": "Pre-seed checks for consumer mobile",
+        "role": "INVESTOR",
+        "skills": []
+      },
+      {
+        "id": "d-3b",
+        "name": "Nanda",
+        "headline": "Founder of climate hardware startup",
+        "bio": "Building solar microgrids",
+        "role": "FOUNDER",
+        "skills": ["hardware"]
+      },
+      {
+        "id": "d-3c",
+        "name": "Bima",
+        "headline": "Partner at fintech-focused vc",
+        "bio": "Series b and c fintech deals",
+        "role": "INVESTOR",
+        "skills": []
+      }
+    ]
+  },
+  {
+    "scenario": "04_cofounder_ai_startup",
+    "intent": "find cofounders for an ai startup",
+    "asker": {
+      "id": "asker-4",
+      "name": "Tia",
+      "headline": "Solo founder building ai assistant",
+      "skills": ["product"],
+      "lookingFor": "Technical cofounder for AI startup"
+    },
+    "candidates": [
+      {
+        "id": "gt-4",
+        "name": "Daniel",
+        "headline": "Looking for cofounders to build an ai company",
+        "bio": "Ex-google ml engineer ready to start an ai company",
+        "role": "AI_ENGINEER",
+        "skills": ["pytorch", "langchain", "python"],
+        "lookingFor": "Cofounder match for ai startup",
+        "ground_truth": true
+      },
+      {
+        "id": "d-4a",
+        "name": "Stella",
+        "headline": "Senior ai engineer not looking to leave full-time role",
+        "bio": "Happy at current company",
+        "role": "AI_ENGINEER",
+        "skills": ["pytorch"]
+      },
+      {
+        "id": "d-4b",
+        "name": "Karim",
+        "headline": "Business cofounder in fintech space",
+        "bio": "Looking for cofounders in payments",
+        "role": "FOUNDER",
+        "skills": ["sales"]
+      },
+      {
+        "id": "d-4c",
+        "name": "Rini",
+        "headline": "Marketing manager at saas company",
+        "skills": ["seo"],
+        "role": "MARKETING_LEAD"
+      }
+    ]
+  },
+  {
+    "scenario": "05_product_strategy_mentor",
+    "intent": "looking for senior product strategy mentor with b2b saas experience",
+    "candidates": [
+      {
+        "id": "gt-5",
+        "name": "Marina",
+        "headline": "Senior product leader at b2b saas, mentors founders",
+        "bio": "Twelve years of b2b saas product strategy, mentor on demand",
+        "role": "PRODUCT_LEAD",
+        "skills": ["product-strategy", "b2b"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-5a",
+        "name": "Eko",
+        "headline": "Junior product manager at consumer app",
+        "bio": "Two years of pm experience in consumer",
+        "role": "PRODUCT_MANAGER",
+        "skills": ["analytics"]
+      },
+      {
+        "id": "d-5b",
+        "name": "Hanna",
+        "headline": "Senior backend engineer at b2b saas",
+        "bio": "Postgres and event-driven systems",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["postgres"]
+      },
+      {
+        "id": "d-5c",
+        "name": "Tommy",
+        "headline": "Marketing director at e-commerce",
+        "skills": ["paid-ads"],
+        "role": "MARKETING_LEAD"
+      }
+    ]
+  },
+  {
+    "scenario": "06_ux_designer_early_stage",
+    "intent": "looking for ux designer to collaborate on early-stage startup",
+    "candidates": [
+      {
+        "id": "gt-6",
+        "name": "Yuni",
+        "headline": "Ux designer at early-stage startup",
+        "bio": "Designing for early-stage startups, focus on ux research",
+        "role": "DESIGNER",
+        "skills": ["figma", "user-research"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-6a",
+        "name": "Bagus",
+        "headline": "Graphic designer at marketing agency",
+        "bio": "Brand identity and print",
+        "role": "DESIGNER",
+        "skills": ["illustrator"]
+      },
+      {
+        "id": "d-6b",
+        "name": "Citra",
+        "headline": "Full-stack developer at consultancy",
+        "skills": ["react", "node"],
+        "role": "FULLSTACK_DEVELOPER"
+      },
+      {
+        "id": "d-6c",
+        "name": "Vera",
+        "headline": "Data scientist in academia",
+        "skills": ["pytorch"],
+        "role": "DATA_SCIENTIST"
+      }
+    ]
+  },
+  {
+    "scenario": "07_ml_engineer_hire_langchain",
+    "intent": "hiring ml engineer with langchain and pytorch experience",
+    "asker": {
+      "id": "asker-7",
+      "name": "Pak Slamet",
+      "headline": "Founder at ai startup",
+      "skills": ["product", "python"],
+      "lookingFor": "ML engineer hire"
+    },
+    "candidates": [
+      {
+        "id": "gt-7",
+        "name": "Reza",
+        "headline": "Ml engineer building langchain pipelines",
+        "bio": "Production langchain and pytorch deployments",
+        "role": "AI_ENGINEER",
+        "skills": ["langchain", "pytorch", "python"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-7a",
+        "name": "Dwi",
+        "headline": "Backend engineer using python at fintech",
+        "bio": "Python microservices at fintech",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["python", "fastapi"]
+      },
+      {
+        "id": "d-7b",
+        "name": "Ayu",
+        "headline": "Ml researcher at university",
+        "bio": "Theoretical ml research, papers but no production code",
+        "role": "RESEARCHER",
+        "skills": ["theory"]
+      },
+      {
+        "id": "d-7c",
+        "name": "Surya",
+        "headline": "Devops engineer",
+        "skills": ["kubernetes"],
+        "role": "DEVOPS_ENGINEER"
+      }
+    ]
+  },
+  {
+    "scenario": "08_devops_consultant_kubernetes",
+    "intent": "find devops consultant who knows kubernetes and terraform",
+    "candidates": [
+      {
+        "id": "gt-8",
+        "name": "Pandu",
+        "headline": "Senior devops consultant with kubernetes and terraform",
+        "bio": "Kubernetes and terraform consulting for fintech and saas",
+        "role": "DEVOPS_ENGINEER",
+        "skills": ["kubernetes", "terraform", "aws"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-8a",
+        "name": "Joko Susilo",
+        "headline": "Backend engineer using kubernetes",
+        "bio": "Builds backend services on kubernetes",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["kubernetes", "go"]
+      },
+      {
+        "id": "d-8b",
+        "name": "Maya Sari",
+        "headline": "Cloud architect specialized in azure only",
+        "bio": "Azure architecture and migration",
+        "role": "CLOUD_ARCHITECT",
+        "skills": ["azure"]
+      },
+      {
+        "id": "d-8c",
+        "name": "Dito",
+        "headline": "Full-stack developer at agency",
+        "skills": ["react"],
+        "role": "FULLSTACK_DEVELOPER"
+      }
+    ]
+  },
+  {
+    "scenario": "09_marketing_cofounder_saas",
+    "intent": "find marketing cofounder for saas product",
+    "asker": {
+      "id": "asker-9",
+      "name": "Bayu",
+      "headline": "Technical founder at b2b saas",
+      "skills": ["nestjs", "postgres"],
+      "lookingFor": "Marketing cofounder for SaaS"
+    },
+    "candidates": [
+      {
+        "id": "gt-9",
+        "name": "Amel",
+        "headline": "Marketing cofounder open to saas startup",
+        "bio": "Built b2b saas marketing from zero to series a",
+        "role": "MARKETING_LEAD",
+        "skills": ["growth", "saas"],
+        "lookingFor": "Cofounder match in saas",
+        "ground_truth": true
+      },
+      {
+        "id": "d-9a",
+        "name": "Ferry",
+        "headline": "Marketing manager at e-commerce",
+        "bio": "Performance marketing at e-commerce, employee mindset",
+        "role": "MARKETING_LEAD",
+        "skills": ["sem"]
+      },
+      {
+        "id": "d-9b",
+        "name": "Tina",
+        "headline": "Sales founder in fintech",
+        "bio": "Cofounder of fintech startup, sales-led",
+        "role": "FOUNDER",
+        "skills": ["sales"]
+      },
+      {
+        "id": "d-9c",
+        "name": "Bima Setia",
+        "headline": "Backend engineer at saas company",
+        "skills": ["nestjs"],
+        "role": "BACKEND_DEVELOPER"
+      }
+    ]
+  },
+  {
+    "scenario": "10_frontend_react_typescript_hire",
+    "intent": "hire react frontend engineer with typescript experience",
+    "asker": {
+      "id": "asker-10",
+      "name": "Indra",
+      "headline": "Founder at edtech startup",
+      "skills": ["product"],
+      "lookingFor": "Frontend engineer hire"
+    },
+    "candidates": [
+      {
+        "id": "gt-10",
+        "name": "Lia",
+        "headline": "Frontend engineer specializing in react and typescript",
+        "bio": "Six years of react typescript and nextjs at saas companies",
+        "role": "FRONTEND_DEVELOPER",
+        "skills": ["react", "typescript", "nextjs"],
+        "ground_truth": true
+      },
+      {
+        "id": "d-10a",
+        "name": "Hari",
+        "headline": "Backend engineer using typescript at fintech",
+        "bio": "Typescript backend services on nestjs",
+        "role": "BACKEND_DEVELOPER",
+        "skills": ["typescript", "nestjs"]
+      },
+      {
+        "id": "d-10b",
+        "name": "Sinta",
+        "headline": "React native mobile developer",
+        "bio": "React native ios and android",
+        "role": "MOBILE_DEVELOPER",
+        "skills": ["react-native"]
+      },
+      {
+        "id": "d-10c",
+        "name": "Galih",
+        "headline": "Full-stack developer using vue",
+        "bio": "Vue and laravel projects",
+        "role": "FULLSTACK_DEVELOPER",
+        "skills": ["vue", "laravel"]
+      }
+    ]
+  }
+]

@@ -55,7 +55,7 @@ function buildSystemPrompt(roleCodes: string[]): string {
   const roleList = roleCodes.length
     ? roleCodes.join(', ')
     : '(none configured)';
-  return `You are MyConnect's AI Networking Concierge for a single event.
+  return `You are our company's AI Networking Concierge for a single event.
 You help the attendee find the most relevant other attendees to talk to.
 
 You MUST use tools, never guess attendees. Workflow:
