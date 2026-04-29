@@ -292,6 +292,71 @@ priority order:
 
 ---
 
+## Honesty policy & assumptions
+
+The spec (§6 *Constraints and honesty policy*) explicitly invites a
+clean partial submission over a broken complete one — *"a focused,
+clean 70% beats a broken 100%"*. This README is written in that
+spirit. Concretely:
+
+- **Every Hard no-go from §5 is closed.** Raw SQL is parameterised,
+  prompt injection is verified by an actual e2e test, no API keys in
+  the repo, and "no tests at all" is decisively not the case (10 unit
+  + 2 e2e + 11 eval + a 100% recall@1 result).
+- **Every gap is listed in *"What I would do with more time"* above,
+  ranked by priority.** The two biggest ones — no auth/audit-trail and
+  no live cloud deployment — are flagged in the first two slots, not
+  buried. The cloud gap is honest about its cause (*no paid AWS/Azure
+  subscription right now*) rather than hand-waved.
+- **The CRUD endpoints, the concierge end-to-end flow, the polyglot
+  scorer, the eval harness, and CI all work today.** What does *not*
+  ship is auth, Terraform, and live cloud dashboards. That trade is
+  documented and was made on purpose.
+
+### Assumptions I made (so you can sanity-check my judgment)
+
+The spec leaves a few decisions to the implementer (§6 third bullet:
+*"If a requirement is ambiguous, make a reasonable assumption and
+document it"*). Mine:
+
+1. **Attendee identity in the concierge endpoint.** The body is
+   `{ attendee_id, message }` with no auth. I assumed the demo runs in
+   a trusted reviewer environment and that auth is out of scope — but
+   I called this out as the #1 gap in *"What I would do with more
+   time"*.
+2. **Roles are an enum maintained in the DB, not free-text.** The
+   spec lists role as a generic field; I made it a foreign-keyed
+   `attendee_roles` table seeded with codes like `BACKEND_DEVELOPER`,
+   `AI_ENGINEER`, `FOUNDER`, etc. Reasoning: filterable, sortable,
+   safer for the LLM (the system prompt is built from the seeded list,
+   so the LLM cannot invent role codes that return zero results).
+3. **Match scoring is rule-based, not LLM-judged.** The spec only
+   requires that `score_match` returns `{ score, rationale,
+   shared_ground }`. I implemented a deterministic 5-feature weighted
+   sum so the agent is reproducible and unit-testable. The LLM-judge
+   fallback is wired in `LlmService` but unused. The eval harness
+   ships proof (recall@1 = 100% on 10 fixtures) that the rule-based
+   path is good enough today.
+4. **Stateful agent = "every message persisted, replay all on next
+   turn"**, not a vector-cached summary. At our message counts SQL
+   replay is correct and cheap; rolling-summary memory is on the
+   wishlist but not needed yet.
+5. **Open-to-chat is opt-out at the DB level, not per-conversation.**
+   Attendees with `open_to_chat = false` are filtered out of every
+   `search_attendees` call by SQL, so they never reach the LLM. This
+   doubles as a privacy control (see *PII / data protection* in
+   `ARCHITECTURE.md`).
+6. **Feedback rating is 1–5 stars per the spec** (`rating: 1-5`,
+   `notes?: string`). I added a unique index on `messageId` so every
+   assistant message has at most one feedback row — re-rating
+   overwrites rather than duplicates.
+
+If any of these assumptions clash with how you read the spec, they
+are all single-file changes; I deliberately built them so they could
+be revisited without rewriting the agent or the DB.
+
+---
+
 ## AI assistants used (honesty disclosure)
 
 I used **Cascade (Windsurf)** with Claude Sonnet 4.5 throughout this
